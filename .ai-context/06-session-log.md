@@ -20,6 +20,12 @@
 ---
 
 ## 2026-05-09 · Codex
+**完成 / Done**: 为脱敏测试项目生成第 5 节 `lesson_05` 与第 6 节 `lesson_06` 两张章节导图；每节均输出 `outline.json`、`mindmap.json`、`mindmap.md`、`validation.json`、`self_check.md`，并生成 HTML/SVG/PNG/PDF 到对应 `maps/<section_id>/exports/`。
+**进行中 / In progress**: 导图产物在 `projects/ml_theory2_test/maps/`，按项目规则被 git 忽略；本轮未提交这些生成物。
+**下一步建议 / Next**: 用户确认第 5、6 节视觉和结构后，再批量生成 `lesson_07`、`lesson_08` 或把渲染逻辑沉淀成正式 `render_mindmap.py`。
+**注意 / Watch out**: 当前环境缺少 Playwright，PNG/PDF 由 SVG 渲染链路生成；HTML 中公式保留 LaTeX 文本并通过 KaTeX CDN 渲染，仍需浏览器复核。
+
+## 2026-05-09 · Codex
 **完成 / Done**: 明确课程笔记采用“一个源文档项目、按 H1 章节生成多张导图”的工作方式；新增 `split_sections.py`，可把 `# 第5节课`、`# 第6节课` 等一级标题拆成 `intermediate/sections/<section_id>.md`，并创建 `maps/<section_id>/intermediate/` 与 `maps/<section_id>/exports/`；更新 README、项目工作区说明、Skill 和格式规范；在 `projects/ml_theory2_test` 上验证生成 `lesson_05` 至 `lesson_08`。
 **进行中 / In progress**: 章节拆分产物位于被 git 忽略的测试项目目录中，可作为后续单节课导图生成输入。
 **下一步建议 / Next**: 从 `lesson_05` 开始做真实 Strategist outline，根节点使用该节课主题，H2 作为一级分支，输出到 `maps/lesson_05/intermediate/outline.json`。

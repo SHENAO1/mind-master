@@ -19,10 +19,11 @@
 ## 🚧 In Progress
 - 已为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏后的源文件为 `sources/ml_theory2_notes.docx`，可作为后续导图生成测试基线。
 - 该测试项目已按 H1 拆分为 4 个章节导图单元：`lesson_05`、`lesson_06`、`lesson_07`、`lesson_08`。生成文件在 `projects/ml_theory2_test/intermediate/sections/` 和 `projects/ml_theory2_test/maps/`，当前按项目规则被 git 忽略。
+- 已生成第 5、6 节导图：`projects/ml_theory2_test/maps/lesson_05/` 与 `projects/ml_theory2_test/maps/lesson_06/` 下包含 `outline.json`、`mindmap.json`、`mindmap.md`、`validation.json`、`self_check.md` 和 HTML/SVG/PNG/PDF 导出。
 
 ## ⏭️ Next
-- 基于 `projects/ml_theory2_test/intermediate/sections/lesson_05.md` 先做单节课导图规划测试；H1 作为根节点，H2 作为一级分支，不再整篇文档生成一张导图。
-- 继续用同一方式生成 `lesson_06` 等章节导图；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
+- 复核第 5、6 节 HTML 的浏览器 KaTeX 渲染效果；当前 PNG/PDF 由 SVG 渲染链路生成，未用 Playwright 做 DOM 级公式检查。
+- 继续用同一方式生成 `lesson_07`、`lesson_08`；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。
 - 查看 sample v2 产物：`projects/sample/intermediate/outline.json`、`mindmap.json`、`mindmap_v2.md`、`v2_self_check.md`、`validation.json`，以及 `projects/sample/exports/sample.html/svg/png/pdf`。
 - 每个文档应继续使用独立 `projects/<project_name>/`，不要把导图结果写到仓库根目录；当前 `projects/*` 默认被 git 忽略。
