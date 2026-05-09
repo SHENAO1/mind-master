@@ -20,6 +20,12 @@
 ---
 
 ## 2026-05-09 · Codex
+**完成 / Done**: 为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏源文件命名为 `sources/ml_theory2_notes.docx`；运行 DOCX 转 Markdown，生成 `intermediate/source.md`、`intermediate/source_assets.json`，抽取 29 张图片、97 个公式，并补充 `assets/images/index.json` 作为后续图片筛选输入。
+**进行中 / In progress**: 该脱敏文档项目可作为后续导图生成和验证测试基线。
+**下一步建议 / Next**: 基于该项目做 Strategist outline，优先筛选图片价值，并对 14 条疑似 KaTeX 兼容风险公式做清洗或标记。
+**注意 / Watch out**: 源 DOCX 已脱敏并更名；提交前必须继续搜索确认 Git 历史和将推送文件不含个人敏感信息。
+
+## 2026-05-09 · Codex
 **完成 / Done**: 参考 `ppt-master` 的项目工作区结构和 `.gitignore` 策略，新增 `projects/README.md`，更新 `.gitignore`、`README.md`、`README_CN.md`，明确每个文档/任务独立使用 `projects/<project_name>/`，导出文件进入项目内 `exports/`；重导出 sample v2，检查图片、KaTeX 和节点重叠。
 **进行中 / In progress**: 正在准备提交本轮文档与工作区约定更新。
 **下一步建议 / Next**: 后续实现正式 `render_mindmap.py` / `export_mindmap.py` 时，继续强制所有产物落在项目文件夹内，并考虑增加 `examples/` 用于可分享成品。

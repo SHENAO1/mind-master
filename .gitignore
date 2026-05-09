@@ -9,3 +9,9 @@ tmp_sample/
 projects/*
 !projects/.gitkeep
 !projects/README.md
+!projects/ml_theory2_test/
+projects/ml_theory2_test/*
+!projects/ml_theory2_test/manifest.json
+!projects/ml_theory2_test/sources/
+projects/ml_theory2_test/sources/*
+!projects/ml_theory2_test/sources/ml_theory2_notes.docx

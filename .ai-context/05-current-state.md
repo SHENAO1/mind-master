@@ -16,9 +16,11 @@
 - 已用 `ai-handoff-init` 初始化跨助手上下文：`.ai-context/`、`AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md`。
 
 ## 🚧 In Progress
-- 已参考 `ppt-master` 的 `projects/` 工作区约定，补充 Mind-Master 的项目工作区说明；sample v2 导图已重导出，节点重叠数为 0。
+- 已为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏后的源文件为 `sources/ml_theory2_notes.docx`，可作为后续导图生成测试基线。
 
 ## ⏭️ Next
+- 基于 `projects/ml_theory2_test/intermediate/source.md` 做真实导图规划测试；重点检查 29 张图片筛选和 97 个公式的 KaTeX 兼容性。
+- 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。
 - 查看 sample v2 产物：`projects/sample/intermediate/outline.json`、`mindmap.json`、`mindmap_v2.md`、`v2_self_check.md`、`validation.json`，以及 `projects/sample/exports/sample.html/svg/png/pdf`。
 - 每个文档应继续使用独立 `projects/<project_name>/`，不要把导图结果写到仓库根目录；当前 `projects/*` 默认被 git 忽略。
 - 若要做真实 v1/v2 差异复盘，需提供或恢复 v1 的 `mindmap.json`、HTML/PNG/PDF 与验证报告。

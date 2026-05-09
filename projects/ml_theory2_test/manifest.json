@@ -1,0 +1,32 @@
+{
+  "project_name": "ml_theory2_test",
+  "style": "classic",
+  "canvas": {
+    "width": 1600,
+    "height": 1000
+  },
+  "created_at": "2026-05-09T19:49:30+08:00",
+  "updated_at": "2026-05-09T12:03:34+00:00",
+  "model": "",
+  "pipeline": "mind-master",
+  "sources": [
+    {
+      "imported_at": "2026-05-09T12:03:34+00:00",
+      "original_path": "<redacted>",
+      "path": "projects/ml_theory2_test/sources/ml_theory2_notes.docx",
+      "filename": "ml_theory2_notes.docx"
+    }
+  ],
+  "design": {
+    "palette": "mind-master-default",
+    "font_stack": "Inter, \"Noto Sans SC\", \"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif",
+    "max_depth": 4,
+    "node_limits": {
+      "level_1": "12 Chinese chars or 8 English words",
+      "level_2": "18 Chinese chars or 12 English words",
+      "leaf": "30 Chinese chars or 20 English words"
+    },
+    "image_mode": "relative",
+    "export_scale": 2
+  }
+}
