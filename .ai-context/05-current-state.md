@@ -16,9 +16,12 @@
 - 已用 `ai-handoff-init` 初始化跨助手上下文：`.ai-context/`、`AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md`。
 
 ## 🚧 In Progress
-- 当前没有正在修改的业务代码；本次会话只完成交接上下文初始化和状态记录。
+- 已参考 `ppt-master` 的 `projects/` 工作区约定，补充 Mind-Master 的项目工作区说明；sample v2 导图已重导出，节点重叠数为 0。
 
 ## ⏭️ Next
+- 查看 sample v2 产物：`projects/sample/intermediate/outline.json`、`mindmap.json`、`mindmap_v2.md`、`v2_self_check.md`、`validation.json`，以及 `projects/sample/exports/sample.html/svg/png/pdf`。
+- 每个文档应继续使用独立 `projects/<project_name>/`，不要把导图结果写到仓库根目录；当前 `projects/*` 默认被 git 忽略。
+- 若要做真实 v1/v2 差异复盘，需提供或恢复 v1 的 `mindmap.json`、HTML/PNG/PDF 与验证报告。
 - 补齐 `source_to_md/pdf_to_md.py` 和 `source_to_md/web_to_md.py`，让 Step 1 覆盖 README 中承诺的 PDF/Web 输入。
 - 实现 `extract_assets.py`，生成 `assets/images/index.json`，并接入可选 OCR 信息。
 - 实现 `templates/markmap.html`、`render_mindmap.py`、`batch_validate.py`、`export_mindmap.py`，闭环 Step 6 到 Step 8。

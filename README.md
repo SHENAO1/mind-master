@@ -12,6 +12,32 @@ The project follows the same engineering shape as `ppt-master`: one skill entryp
 - Optional screenshots captured locally with Playwright after explicit URL confirmation
 - SVG, PNG, and PDF exports generated from the HTML
 
+## Project Workspace
+
+Mind-Master is designed to keep each document or document set in its own project folder:
+
+```text
+projects/<project_name>/
+├── sources/          # original DOCX/PDF and normalized source material
+├── assets/           # images, screenshots, and equation cache
+├── intermediate/     # source.md, outline.json, mindmap.json, validation reports
+└── exports/          # HTML, SVG, PNG, and PDF for this document
+```
+
+Create a project:
+
+```bash
+python skills/mind-master/scripts/project_manager.py init <project_name> --style classic
+```
+
+Move source files into that project:
+
+```bash
+python skills/mind-master/scripts/project_manager.py import-sources projects/<project_name> --move <path/to/document.docx>
+```
+
+`projects/*` is ignored by git by default so private source files, extracted images, and exports are not committed accidentally. Shareable finished examples should be copied into a dedicated examples directory rather than stored in the repository root.
+
 ## Repository Layout
 
 ```text
@@ -94,4 +120,4 @@ Copy `.env.example` to `.env` if you need model or optional OCR/image service co
 
 ## Current Status
 
-This repository is being scaffolded in phases. The first phase creates the durable layout and project contract. Scripts and skill references are added in later gated steps.
+The repository now has the Skill entrypoint, reference specs, project management script, initial DOCX-to-Markdown conversion, and OMML-to-LaTeX conversion. PDF/Web input, formal Markmap rendering, batch validation, and export scripts are still pending.

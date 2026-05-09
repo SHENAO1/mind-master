@@ -4,5 +4,8 @@ __pycache__/
 .venv/
 tmp_sample/
 
+# Projects directory - work-in-progress mind map projects are local by default.
+# Completed shareable examples can be copied into a future examples/ directory.
 projects/*
 !projects/.gitkeep
+!projects/README.md

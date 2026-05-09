@@ -12,6 +12,32 @@ Mind-Master 是一个本地运行、IDE 内对话驱动的文档转思维导图�
 - 经用户确认后由 Playwright 本地截取的网页或 PDF 局部截图
 - 从 HTML 导出的 SVG、PNG、PDF
 
+## 项目工作区
+
+Mind-Master 默认支持“一个文档或一组文档一个项目文件夹”。每次生成都放在：
+
+```text
+projects/<project_name>/
+├── sources/          # 原始 DOCX/PDF 与规范化源材料
+├── assets/           # 图片、截图、公式缓存
+├── intermediate/     # source.md、outline.json、mindmap.json、校验报告
+└── exports/          # 该文档的 HTML、SVG、PNG、PDF
+```
+
+初始化项目：
+
+```bash
+python skills/mind-master/scripts/project_manager.py init <project_name> --style classic
+```
+
+导入原始文档：
+
+```bash
+python skills/mind-master/scripts/project_manager.py import-sources projects/<project_name> --move <path/to/document.docx>
+```
+
+`projects/*` 默认不进入 git，避免把用户文档、图片和导出文件误提交。可分享的成品示例后续应复制到独立的 `examples/` 目录，而不是把所有导图堆在仓库根目录。
+
 ## 仓库结构
 
 ```text
@@ -110,4 +136,4 @@ python -m playwright install chromium
 
 ## 当前阶段
 
-当前仓库按第一阶段交付顺序搭建。第 1 项先落地目录骨架、README、依赖清单和环境变量模板；后续每项通过 GATE checkpoint 单独确认。
+当前仓库已建立 Skill、references、项目管理脚本、DOCX 转 Markdown 与 OMML 转 LaTeX 初版。PDF/Web 输入、正式 Markmap 渲染、批量校验和导出脚本仍待补齐。
