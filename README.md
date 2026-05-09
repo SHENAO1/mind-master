@@ -1,0 +1,97 @@
+# Mind-Master
+
+Mind-Master is a local, IDE-driven workflow for turning Word or PDF source documents into high-quality mind maps with editable LaTeX math and selectively embedded images or screenshots.
+
+The project follows the same engineering shape as `ppt-master`: one skill entrypoint, reference specs loaded on demand, scriptable pipeline steps, and serial gates between roles. It is not a hosted SaaS. Source files, intermediate artifacts, extracted assets, and final exports stay on the user's disk.
+
+## What It Produces
+
+- Interactive single-file Markmap HTML
+- KaTeX-rendered LaTeX equations
+- Embedded or relative-path images from the original document
+- Optional screenshots captured locally with Playwright after explicit URL confirmation
+- SVG, PNG, and PDF exports generated from the HTML
+
+## Repository Layout
+
+```text
+mind-master/
+├── README.md
+├── README_CN.md
+├── requirements.txt
+├── .env.example
+├── skills/
+│   └── mind-master/
+│       ├── SKILL.md
+│       ├── references/
+│       └── scripts/
+│           ├── project_manager.py
+│           ├── source_to_md/
+│           │   ├── doc_to_md.py
+│           │   ├── pdf_to_md.py
+│           │   └── web_to_md.py
+│           ├── extract_assets.py
+│           ├── omml_to_latex.py
+│           ├── screenshot_capture.py
+│           ├── render_mindmap.py
+│           ├── export_mindmap.py
+│           └── batch_validate.py
+├── templates/
+│   └── markmap.html
+└── projects/
+    └── <project_name>/
+        ├── sources/
+        ├── assets/
+        │   ├── images/
+        │   └── equations/
+        ├── intermediate/
+        │   ├── source.md
+        │   ├── outline.json
+        │   └── mindmap.json
+        └── exports/
+```
+
+## Pipeline
+
+```text
+DOCX/PDF
+  -> [1. Convert to Markdown]
+  -> [2. Initialize Project]
+  -> [3. Extract Assets]
+  -> [4. Strategist Outline]
+  -> [5. Image/Screenshot Decision]
+  -> [6. Executor Render]
+  -> [7. Formula and Image Validation]
+  -> [8. Export]
+```
+
+Each step is serial. A step must print a `GATE` checkpoint with delivered paths before the next step starts.
+
+## Core Rules
+
+- No cloud upload by default.
+- `project_manager.py import-sources` moves source files into `projects/<name>/sources/`; it does not copy them.
+- Executor reads all relevant references in one batch before first generation.
+- The first rendered map requires explicit design parameter confirmation.
+- External URL screenshots require explicit user confirmation before Playwright opens the URL.
+- Equations remain LaTeX text in HTML and are rendered by KaTeX in the browser.
+
+## Setup
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+python -m playwright install chromium
+```
+
+System dependencies:
+
+- `poppler` is required by `pdf2image`.
+- `tesseract` is optional and enables OCR for image relevance scoring.
+
+Copy `.env.example` to `.env` if you need model or optional OCR/image service configuration. The default local workflow does not require uploading source documents.
+
+## Current Status
+
+This repository is being scaffolded in phases. The first phase creates the durable layout and project contract. Scripts and skill references are added in later gated steps.
