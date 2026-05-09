@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+tmp_sample/
+
+projects/*
+!projects/.gitkeep
