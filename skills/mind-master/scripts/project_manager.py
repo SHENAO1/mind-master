@@ -34,6 +34,7 @@ REQUIRED_DIRS = (
     "assets/equations",
     "intermediate",
     "exports",
+    "maps",
 )
 
 
@@ -129,6 +130,7 @@ def init_project(args: argparse.Namespace) -> int:
     console_print(f"- assets: {project_path / 'assets'}")
     console_print(f"- intermediate: {project_path / 'intermediate'}")
     console_print(f"- exports: {project_path / 'exports'}")
+    console_print(f"- maps: {project_path / 'maps'}")
     return 0
 
 

@@ -14,14 +14,18 @@ Mind-Master 是一个本地运行、IDE 内对话驱动的文档转思维导图�
 
 ## 项目工作区
 
-Mind-Master 默认支持“一个文档或一组文档一个项目文件夹”。每次生成都放在：
+Mind-Master 默认支持“一个文档或一组文档一个项目文件夹”。如果一个文档内部包含多节课或多章，则仍保留一个项目文件夹，并按章节生成多个导图子工作区：
 
 ```text
 projects/<project_name>/
 ├── sources/          # 原始 DOCX/PDF 与规范化源材料
 ├── assets/           # 图片、截图、公式缓存
-├── intermediate/     # source.md、outline.json、mindmap.json、校验报告
-└── exports/          # 该文档的 HTML、SVG、PNG、PDF
+├── intermediate/
+│   ├── source.md
+│   └── sections/     # 可选：按一级标题拆出的章节 Markdown
+├── exports/          # 可选：整篇文档的 HTML、SVG、PNG、PDF
+└── maps/
+    └── <section_id>/ # 单节课/单章的 outline、mindmap、校验和导出
 ```
 
 初始化项目：
@@ -37,6 +41,12 @@ python skills/mind-master/scripts/project_manager.py import-sources projects/<pr
 ```
 
 `projects/*` 默认不进入 git，避免把用户文档、图片和导出文件误提交。可分享的成品示例后续应复制到独立的 `examples/` 目录，而不是把所有导图堆在仓库根目录。
+
+按 `# 第5节课`、`# 第6节课` 这类一级标题拆分导图工作区：
+
+```bash
+python skills/mind-master/scripts/split_sections.py projects/<project_name>
+```
 
 ## 仓库结构
 
@@ -67,6 +77,7 @@ mind-master/
 │           │   └── web_to_md.py
 │           ├── extract_assets.py
 │           ├── omml_to_latex.py
+│           ├── split_sections.py
 │           ├── screenshot_capture.py
 │           ├── render_mindmap.py
 │           ├── export_mindmap.py
@@ -81,9 +92,10 @@ mind-master/
         │   └── equations/
         ├── intermediate/
         │   ├── source.md
-        │   ├── outline.json
-        │   └── mindmap.json
-        └── exports/
+        │   └── sections/
+        ├── exports/
+        └── maps/
+            └── <section_id>/
 ```
 
 ## 八步流水线
@@ -93,6 +105,7 @@ DOCX/PDF
   -> [1. 转 Markdown]
   -> [2. 建项目]
   -> [3. 抽资产]
+  -> [3.5 按章节拆分，可选]
   -> [4. Strategist 结构规划]
   -> [5. Image/Screenshot 决策]
   -> [6. Executor 渲染]

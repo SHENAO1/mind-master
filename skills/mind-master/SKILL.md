@@ -26,6 +26,7 @@ DOCX/PDF
   -> [1. Convert Source to Markdown]
   -> [2. Initialize Project]
   -> [3. Extract Assets]
+  -> [3.5 Split Section Maps, optional]
   -> [4. Strategist Outline]
   -> [5. Image/Screenshot Decision]
   -> [6. Executor Render]
@@ -78,14 +79,35 @@ projects/<project_name>/
 │   └── equations/
 ├── intermediate/
 │   ├── source.md
+│   ├── sections/
+│   │   ├── index.json
+│   │   └── <section_id>.md
 │   ├── outline.json
 │   └── mindmap.json
-└── exports/
-    ├── <project_name>.html
-    ├── <project_name>.svg
-    ├── <project_name>.png
-    └── <project_name>.pdf
+├── exports/
+│   ├── <project_name>.html
+│   ├── <project_name>.svg
+│   ├── <project_name>.png
+│   └── <project_name>.pdf
+└── maps/
+    └── <section_id>/
+        ├── intermediate/
+        │   ├── outline.json
+        │   ├── mindmap.json
+        │   └── validation.json
+        └── exports/
+            ├── <section_id>.html
+            ├── <section_id>.svg
+            ├── <section_id>.png
+            └── <section_id>.pdf
 ```
+
+Section map mode:
+
+- Use one project per source document or document set.
+- Use one `maps/<section_id>/` workspace per major document section when the source is naturally divided into lessons, chapters, or modules.
+- For course notes such as `# 第5节课` and `# 第6节课`, each H1 section becomes one independent mind map. The H1 is the map root; its H2 headings become the first-level branches.
+- Do not generate all lesson maps into the repository root. Keep shared source assets under the project, and keep each map's outline, validation, and exports inside its own `maps/<section_id>/` directory.
 
 ## Style Selection Gate
 
@@ -265,12 +287,45 @@ GATE 3 ✅ Assets extracted.
 Deliverables:
 - image index: projects/<project_name>/assets/images/index.json
 - images: projects/<project_name>/assets/images/
-Confirm to continue to Step 4.
+Confirm to continue to Step 3.5 if section map mode is needed, otherwise Step 4.
 ```
 
 Failure helper:
 
 - `references/image-policy.md#error-helper`
+
+## Step 3.5. Split Section Maps
+
+Role: section splitter.
+
+Use this optional step when one source document should produce multiple maps, such as one map per lesson or chapter.
+
+Inputs:
+
+- `projects/<project_name>/intermediate/source.md`
+
+Command:
+
+```bash
+python skills/mind-master/scripts/split_sections.py projects/<project_name>
+```
+
+Outputs:
+
+- `projects/<project_name>/intermediate/sections/index.json`
+- `projects/<project_name>/intermediate/sections/<section_id>.md`
+- `projects/<project_name>/maps/<section_id>/`
+
+Checkpoint:
+
+```text
+GATE 3.5 ✅ Section workspaces created.
+Deliverables:
+- section index: projects/<project_name>/intermediate/sections/index.json
+- section sources: projects/<project_name>/intermediate/sections/
+- map workspaces: projects/<project_name>/maps/
+Confirm which section_id to continue to Step 4.
+```
 
 ## Step 4. Strategist Outline
 
@@ -285,7 +340,7 @@ Before starting:
 
 Inputs:
 
-- `projects/<project_name>/intermediate/source.md`
+- `projects/<project_name>/intermediate/source.md`, or `projects/<project_name>/intermediate/sections/<section_id>.md` in section map mode
 - `projects/<project_name>/assets/images/index.json`
 - `projects/<project_name>/manifest.json`
 
@@ -299,7 +354,7 @@ The actual outline authoring is done by the agent according to `references/strat
 
 Output:
 
-- `projects/<project_name>/intermediate/outline.json`
+- `projects/<project_name>/intermediate/outline.json`, or `projects/<project_name>/maps/<section_id>/intermediate/outline.json` in section map mode
 
 Checkpoint:
 
@@ -327,7 +382,7 @@ Before external URL screenshots:
 
 Inputs:
 
-- `projects/<project_name>/intermediate/outline.json`
+- `projects/<project_name>/intermediate/outline.json`, or `projects/<project_name>/maps/<section_id>/intermediate/outline.json` in section map mode
 - `projects/<project_name>/assets/images/index.json`
 - optional local PDF paths in `projects/<project_name>/sources/`
 

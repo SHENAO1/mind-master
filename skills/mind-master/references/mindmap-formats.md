@@ -14,6 +14,33 @@ This file defines artifact formats for Mind-Master.
 - equations as `$...$` or `$$...$$`
 - unresolved equations as `[EQUATION_UNRESOLVED:<id>]`
 
+## Section Sources
+
+When a single document contains several lesson, chapter, or module sections, split the source by the chosen heading level before outlining.
+
+Default section mode uses H1 headings:
+
+```text
+intermediate/sections/
+├── index.json
+├── lesson_05.md
+└── lesson_06.md
+```
+
+`intermediate/sections/index.json` contains:
+
+- `source`: original Markdown source path
+- `split_level`: heading level used as the map unit
+- `section_count`
+- `sections[]` with `id`, `title`, `source`, `map_dir`, `line_start`, and `line_end`
+
+Rules:
+
+- One section source produces one mind map.
+- The section heading is the root node.
+- The section's direct child headings become the first-level branches.
+- Keep map-specific artifacts under `maps/<section_id>/`; do not mix multiple section maps in the project root.
+
 ## Outline JSON
 
 `intermediate/outline.json` is the Strategist output. It contains semantic structure and candidates, not final render choices.
@@ -75,6 +102,14 @@ Rules:
 - load all images from relative paths or embedded base64;
 - be openable by double-click where possible.
 
+In section map mode, write HTML to:
+
+```text
+maps/<section_id>/exports/<section_id>.html
+```
+
+Relative image paths should still resolve to the project-level `assets/images/` directory.
+
 ## Export Output
 
 Step 8 writes:
@@ -82,6 +117,12 @@ Step 8 writes:
 - `exports/<project_name>.svg`
 - `exports/<project_name>.png`
 - `exports/<project_name>.pdf`
+
+In section map mode, Step 8 writes:
+
+- `maps/<section_id>/exports/<section_id>.svg`
+- `maps/<section_id>/exports/<section_id>.png`
+- `maps/<section_id>/exports/<section_id>.pdf`
 
 PNG default scale: `2`.
 

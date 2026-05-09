@@ -11,15 +11,18 @@
 - Skill 入口已建立：`skills/mind-master/SKILL.md`，包含触发词、八步流水线、GATE 规则、路径契约和命令样例。
 - Reference 规范已建立：shared standards、strategist、executor base/classic/logic/org、mindmap formats、math rendering、image policy。
 - 项目管理脚本已实现：`project_manager.py` 支持 `init`、`import-sources`、`validate`。
+- 章节拆分脚本已实现：`split_sections.py` 可按 H1 将 `intermediate/source.md` 拆成 `intermediate/sections/<section_id>.md`，并创建 `maps/<section_id>/` 导图子工作区。
 - DOCX 转 Markdown 脚本已实现初版：`doc_to_md.py` 支持标题、列表、表格、图片抽取、OMML 公式转换和资产报告。
 - OMML 到 LaTeX 转换脚本已实现：`omml_to_latex.py` 支持常见分式、根式、上下标、n-ary、矩阵、重音等结构。
 - 已用 `ai-handoff-init` 初始化跨助手上下文：`.ai-context/`、`AGENTS.md`、`CLAUDE.md`、`.github/copilot-instructions.md`。
 
 ## 🚧 In Progress
 - 已为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏后的源文件为 `sources/ml_theory2_notes.docx`，可作为后续导图生成测试基线。
+- 该测试项目已按 H1 拆分为 4 个章节导图单元：`lesson_05`、`lesson_06`、`lesson_07`、`lesson_08`。生成文件在 `projects/ml_theory2_test/intermediate/sections/` 和 `projects/ml_theory2_test/maps/`，当前按项目规则被 git 忽略。
 
 ## ⏭️ Next
-- 基于 `projects/ml_theory2_test/intermediate/source.md` 做真实导图规划测试；重点检查 29 张图片筛选和 97 个公式的 KaTeX 兼容性。
+- 基于 `projects/ml_theory2_test/intermediate/sections/lesson_05.md` 先做单节课导图规划测试；H1 作为根节点，H2 作为一级分支，不再整篇文档生成一张导图。
+- 继续用同一方式生成 `lesson_06` 等章节导图；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。
 - 查看 sample v2 产物：`projects/sample/intermediate/outline.json`、`mindmap.json`、`mindmap_v2.md`、`v2_self_check.md`、`validation.json`，以及 `projects/sample/exports/sample.html/svg/png/pdf`。
 - 每个文档应继续使用独立 `projects/<project_name>/`，不要把导图结果写到仓库根目录；当前 `projects/*` 默认被 git 忽略。

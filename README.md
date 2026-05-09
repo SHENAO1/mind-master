@@ -14,14 +14,18 @@ The project follows the same engineering shape as `ppt-master`: one skill entryp
 
 ## Project Workspace
 
-Mind-Master is designed to keep each document or document set in its own project folder:
+Mind-Master is designed to keep each document or document set in its own project folder. If one document contains several lessons or chapters, keep the document in one project and create one map workspace per section:
 
 ```text
 projects/<project_name>/
 ├── sources/          # original DOCX/PDF and normalized source material
 ├── assets/           # images, screenshots, and equation cache
-├── intermediate/     # source.md, outline.json, mindmap.json, validation reports
-└── exports/          # HTML, SVG, PNG, and PDF for this document
+├── intermediate/
+│   ├── source.md
+│   └── sections/     # optional per-lesson/per-chapter Markdown splits
+├── exports/          # optional whole-document HTML, SVG, PNG, and PDF
+└── maps/
+    └── <section_id>/ # section-specific outline, mindmap, validation, exports
 ```
 
 Create a project:
@@ -37,6 +41,12 @@ python skills/mind-master/scripts/project_manager.py import-sources projects/<pr
 ```
 
 `projects/*` is ignored by git by default so private source files, extracted images, and exports are not committed accidentally. Shareable finished examples should be copied into a dedicated examples directory rather than stored in the repository root.
+
+Split a converted document into one workspace per H1 section, such as `# 第5节课` and `# 第6节课`:
+
+```bash
+python skills/mind-master/scripts/split_sections.py projects/<project_name>
+```
 
 ## Repository Layout
 
@@ -58,6 +68,7 @@ mind-master/
 │           │   └── web_to_md.py
 │           ├── extract_assets.py
 │           ├── omml_to_latex.py
+│           ├── split_sections.py
 │           ├── screenshot_capture.py
 │           ├── render_mindmap.py
 │           ├── export_mindmap.py
@@ -72,9 +83,10 @@ mind-master/
         │   └── equations/
         ├── intermediate/
         │   ├── source.md
-        │   ├── outline.json
-        │   └── mindmap.json
-        └── exports/
+        │   └── sections/
+        ├── exports/
+        └── maps/
+            └── <section_id>/
 ```
 
 ## Pipeline
@@ -84,6 +96,7 @@ DOCX/PDF
   -> [1. Convert to Markdown]
   -> [2. Initialize Project]
   -> [3. Extract Assets]
+  -> [3.5 Split Sections, optional]
   -> [4. Strategist Outline]
   -> [5. Image/Screenshot Decision]
   -> [6. Executor Render]

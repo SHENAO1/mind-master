@@ -20,6 +20,12 @@
 ---
 
 ## 2026-05-09 · Codex
+**完成 / Done**: 明确课程笔记采用“一个源文档项目、按 H1 章节生成多张导图”的工作方式；新增 `split_sections.py`，可把 `# 第5节课`、`# 第6节课` 等一级标题拆成 `intermediate/sections/<section_id>.md`，并创建 `maps/<section_id>/intermediate/` 与 `maps/<section_id>/exports/`；更新 README、项目工作区说明、Skill 和格式规范；在 `projects/ml_theory2_test` 上验证生成 `lesson_05` 至 `lesson_08`。
+**进行中 / In progress**: 章节拆分产物位于被 git 忽略的测试项目目录中，可作为后续单节课导图生成输入。
+**下一步建议 / Next**: 从 `lesson_05` 开始做真实 Strategist outline，根节点使用该节课主题，H2 作为一级分支，输出到 `maps/lesson_05/intermediate/outline.json`。
+**注意 / Watch out**: 不要回退到“整篇文档一张思维导图”；章节 Markdown 中图片路径仍按项目根解析到 `assets/images/`。
+
+## 2026-05-09 · Codex
 **完成 / Done**: 为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏源文件命名为 `sources/ml_theory2_notes.docx`；运行 DOCX 转 Markdown，生成 `intermediate/source.md`、`intermediate/source_assets.json`，抽取 29 张图片、97 个公式，并补充 `assets/images/index.json` 作为后续图片筛选输入。
 **进行中 / In progress**: 该脱敏文档项目可作为后续导图生成和验证测试基线。
 **下一步建议 / Next**: 基于该项目做 Strategist outline，优先筛选图片价值，并对 14 条疑似 KaTeX 兼容风险公式做清洗或标记。
