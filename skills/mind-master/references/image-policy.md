@@ -13,22 +13,79 @@ Images must improve comprehension. They are not decoration.
 
 Every image that appears in the active Word/PDF source must receive one explicit decision before rendering.
 
-Allowed decisions:
+Allowed final decisions:
 
-- `image`: keep and embed the source image near the relevant node.
-- `crop`: keep a readable crop when the original contains useful but crowded content.
-- `redraw`: recreate as SVG or a simple diagram when the original is an instructional sketch, slide screenshot, or too blurry at node size.
-- `omitted`: remove only when decorative, duplicated, too small, unreadable, or not needed for understanding.
+- `preserve`: keep and enlarge the original source figure only when it is a real data chart, experimental plot, readable source photograph, or non-recreatable core evidence. Data charts should render at a readable width, normally at least 400 px, with caption and source ID.
+- `redraw:<template_id>` / `redraw`: recreate the concept only when the asset has a registered SVG template in `assets/svg_templates/`. Redraw is semantic, not decorative.
+- `omit`: completely remove the image region and let text carry the node. This is the default for all figures that are neither `preserve` nor registered-template `redraw`.
+
+Legacy input decisions such as `image`, `crop`, `embed_source`, `redraw_svg`, or `omitted` must be normalized to `preserve`, `redraw:<template_id>`, or `omit` before final rendering.
 
 Record the decision in both `figure_decisions` and `coverage_report.figures` / `coverage_report.omitted`. Do not silently drop source images.
 
-Layout crowding is not a valid reason to delete a source figure. If the map is crowded, change the layout first: switch to `balanced_two_sided`, resize the figure, crop it, or move it within the same semantic branch. Core teaching figures should be enlarged, cropped, or rearranged before redraw is considered; redraw or omission is the last resort and still requires an explicit recorded decision.
+Layout crowding alone is not a valid reason to delete a source figure, but mind maps are text-first artifacts. If a figure has no readable evidence value and no registered redraw template, omit it explicitly and strengthen the related node text instead of inserting a low-value visual.
 
 Every source image in the active section must:
 
 - appear in `figure_decisions`;
 - appear in either `coverage_report.figures` or `coverage_report.omitted`;
 - keep its source ID/path traceable even when cropped, redrawn, or omitted.
+
+## Three-Way Figure Policy
+
+The default is `omit`.
+
+### A. `preserve`
+
+Use only for source-backed data or irreducible visual evidence:
+
+- real experimental curves, plots, heatmaps, or measured data visuals;
+- figures where exact shape, values, or coordinates matter;
+- assets explicitly classified as `type: "data_chart"`, `is_data_chart: true`, and `decision_hint: "preserve"`.
+
+Rendering requirements:
+
+- embed the original image at readable size, normally width `>= 400px`;
+- provide meaningful `alt`, caption, and source ID;
+- never classify ordinary slide screenshots as `preserve` merely because they contain a curve-like drawing.
+
+### B. `redraw:<template_id>`
+
+Use only when a registered SVG template exists in `assets/svg_templates/`.
+
+Initial registered templates:
+
+- `loss_landscape_sharp_vs_flat.svg`
+- `gradient_vs_momentum_vector.svg`
+- `batch_size_update_comparison.svg`
+
+Rules:
+
+- The renderer must load the registered template by ID.
+- If `decision=redraw` but the template is missing, automatically downgrade to `omit` and log `redraw_template_missing: <asset_id>`.
+- Do not use generic placeholder curves, generic wave diagrams, or repeated filler SVGs.
+
+### C. `omit`
+
+Use for the normal case:
+
+- screenshots, slide captures, dense text screenshots, decorative images, and blurry diagrams;
+- concept visuals without a registered SVG template;
+- figures already fully covered by text.
+
+When omitting a source figure, the related node must carry enough text to stand alone: at least one concept description plus normally 4 to 6 source-backed details for an H3 node.
+
+## Hard Screenshot Rule
+
+Document screenshots are semantic references, not final embedded artwork.
+
+- Every asset whose `type` is `screenshot`, `slide`, or `photo` defaults to `decision_hint: "omit"` unless it is explicitly classified as a real data chart or matches a registered SVG template.
+- Executor must not render these assets through `<img>` or Markdown image syntax.
+- Executor may reference the asset only as source evidence for a registered-template redraw or for explaining why it was omitted.
+- `render_mindmap.py` must normalize any `figure_decisions` item targeting such an asset into `preserve`, `redraw:<template_id>`, or `omit` before writing HTML.
+- `batch_validate.py` must fail when final HTML or `mindmap.md` directly embeds an `assets/images/...` file whose asset `type` is `screenshot`, `slide`, or `photo`, or whose `redraw_required` is true.
+- `batch_validate.py` must fail when inline SVGs look like repeated generic placeholder curves.
+- Coverage must still record the original source asset ID/path, with `action: "redraw"` or `action: "omit"` as appropriate.
 
 ## Selection Rules
 
@@ -52,11 +109,11 @@ Reject an image when:
 
 Use this priority order for every candidate visual:
 
-1. Keep core teaching figures with their related node when they carry source meaning that text, a table, or a formula cannot fully replace.
-2. Crop or resize source figures when they are useful but crowded.
-3. Reflow the layout, including switching to `balanced_two_sided`, when several useful figures make the map too tall.
-4. Redraw simple instructional schematics as SVG only when redraw improves readability without changing the source claim.
-5. Omit only decorative, duplicated, tiny, unreadable, or low-value figures, and record the omission explicitly.
+1. Classify the asset in `assets/images/index.json` with `type`, `is_data_chart`, `redraw_required`, and `decision_hint`.
+2. Preserve real data charts only when they remain meaningful at readable size.
+3. Redraw only through a registered SVG template.
+4. Omit all other visuals and strengthen the related node text.
+5. Reflow the layout, including switching to `balanced_two_sided`, when several preserved/redrawn visuals make the map too tall.
 
 Source images used in final output must have:
 
@@ -72,17 +129,18 @@ For every important image candidate, Step 5 must ask:
 Image Decision GATE: 这张候选图是数据图（可保留）还是示意图（应重绘）？
 - image_id: <id>
 - source_anchor: <anchor>
-- proposed decision: no image | redraw_svg | embed_source
+- proposed decision: omit | redraw:<template_id> | preserve
 - reason: <why>
 ```
 
 Default decisions:
 
-- slide screenshots, whiteboard photos, and lecture schematic images extracted from DOCX use `image` or `crop` when they are core teaching figures; use `redraw` only when a clean equivalent is more readable and source meaning is preserved;
-- real data curves, heatmaps, tables captured as images, or non-redrawable screenshots may use `embed_source` if readable;
-- decorative logos, cover images, and dense text screenshots use `no image`.
+- slide screenshots, whiteboard photos, lecture schematic screenshots, and generic DOCX extracted images use `omit` by default;
+- real data curves, heatmaps, or tables captured as images may use `preserve` only when `type: "data_chart"`, `is_data_chart: true`, and `redraw_required: false`;
+- concept screenshots may use `redraw:<template_id>` only when a registered template matches;
+- decorative logos, cover images, dense text screenshots, and unmatched screenshots use `omit`.
 
-`assets/images/index.json` may record `figure_kind`, `decision`, `embed`, `redraw_instruction`, and `caption` to carry this decision into Step 6. The active outline must still include `figure_decisions` so validation can prove every source image was handled.
+`assets/images/index.json` must record `type`, `is_data_chart`, `redraw_required`, `decision_hint`, optional `redraw_template_id`, optional `redraw_instruction`, and `caption` where available to carry this decision into Step 6. The active outline must still include `figure_decisions` so validation can prove every source image was handled.
 
 ## OCR Rules
 
@@ -103,6 +161,12 @@ Default decisions:
   "source_anchor": "page-3-equation-2",
   "width": 640,
   "height": 360,
+  "type": "screenshot | slide | photo | data_chart | illustration | decorative",
+  "is_data_chart": false,
+  "redraw_required": true,
+  "decision_hint": "omit | preserve | redraw:<template_id>",
+  "redraw_template_id": "",
+  "redraw_instruction": "Redraw this screenshot as a compact SVG concept diagram.",
   "ocr_text": ""
 }
 ```
@@ -144,7 +208,7 @@ Local PDF page screenshots do not require external URL confirmation.
 - Do not strip provenance.
 - For external screenshots, store target URL and capture time.
 - Do not upload or republish beyond local output unless the user asks.
-- Avoid republishing lecture slide screenshots when an equivalent inline SVG redraw can explain the concept.
+- Do not directly embed lecture slide screenshots when an equivalent inline SVG redraw can explain the concept.
 
 ## Error Helper
 
@@ -153,5 +217,5 @@ When image handling fails:
 - missing file: remove or fix the index entry before rendering;
 - missing alt: write a concise factual alt;
 - screenshot blocked: record the failed intent and continue without it;
-- unreadable crop: retry with a larger bbox or full figure selector;
+- unreadable preserve image: enlarge it, then omit with recorded reason if it still cannot be read;
 - OCR unavailable: leave `ocr_text` empty and continue.

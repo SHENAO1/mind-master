@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 180" role="img" aria-label="Gradient direction and momentum vector composition">
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#2563d8"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#f97316"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#17813b"/>
+    </marker>
+  </defs>
+  <rect width="420" height="180" rx="16" fill="#ffffff"/>
+  <circle cx="118" cy="112" r="8" fill="#1f4e5f"/>
+  <path d="M118 112 L212 62" stroke="#2563d8" stroke-width="5" marker-end="url(#arrow-blue)" fill="none"/>
+  <path d="M118 112 L202 126" stroke="#f97316" stroke-width="5" marker-end="url(#arrow-orange)" fill="none"/>
+  <path d="M118 112 L262 84" stroke="#17813b" stroke-width="7" marker-end="url(#arrow-green)" fill="none"/>
+  <g font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">
+    <text x="220" y="54" fill="#2563d8">current gradient</text>
+    <text x="210" y="144" fill="#f97316">previous direction</text>
+    <text x="270" y="80" fill="#17813b">momentum update</text>
+  </g>
+</svg>

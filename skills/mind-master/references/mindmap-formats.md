@@ -55,7 +55,8 @@ Required top-level fields:
 Node fields:
 
 - `id`: stable node ID
-- `type`: optional node type. Defaults to `concept`; may be `concept`, `table`, `formula`, `image`, or `note`
+- `type`: optional node type. Defaults to `concept`; may be `concept`, `table`, `formula`, `image`, `note`, `keywords`, or `tips`
+- `section_id`: required on H2/H3 heading nodes when the source has visible numbering, such as `5.1` or `5.1.1`
 - `title`: short visible label
 - `description`: optional factual explanation grounded in source
 - `summary`: optional independent synthesis from source, not a mandatory conclusion
@@ -100,6 +101,7 @@ Rules:
 - `side` is `center` for `vertical` / `compact_radial`, and `left` or `right` for `balanced_two_sided`.
 - Layout changes must not remove or merge H2/H3 sections, tables, formulas, or figure decisions.
 - Under `balanced_two_sided`, all H3 and lower content under the same H2 stays on the same side as that H2.
+- H2 headings remain first-level branches and H3 headings remain second-level nodes. `balanced_two_sided` may move an entire H2 branch left/right, but must not promote H3 nodes to first-level cards.
 
 ## Coverage Report
 
@@ -124,7 +126,7 @@ The coverage report records where source content went. It prevents the map from 
       {"source_label": "公式5-1", "node_path": "root > Momentum > 动量公式", "action": "formula"}
     ],
     "figures": [
-      {"source_id": "fig_p23_002", "source_path": "assets/images/fig_p23_002.png", "node_path": "root > Batch > Batch 定义", "action": "image"}
+      {"source_id": "fig_p23_002", "source_path": "assets/images/fig_p23_002.png", "node_path": "root > Batch > Batch 定义", "action": "omit"}
     ],
     "omitted": [
       {"source": "fig_p12_001", "reason": "装饰性图片"}
@@ -133,7 +135,7 @@ The coverage report records where source content went. It prevents the map from 
 }
 ```
 
-Actions are `node`, `table`, `formula`, `image`, `redraw`, or `omitted`.
+Actions are `node`, `table`, `formula`, `preserve`, `redraw`, or `omit`.
 
 ## Figure Decisions
 
@@ -145,7 +147,7 @@ Every image in the active source must receive one explicit decision:
     {
       "source_id": "fig_p38_004",
       "source_path": "assets/images/fig_p38_004.png",
-      "decision": "image",
+      "decision": "preserve",
       "node_id": "n_batch_speed",
       "node_path": "root > Batch > 效率机制",
       "alt": "不同 Batch Size 下单次更新时间与 Epoch 时间对比",
@@ -157,10 +159,16 @@ Every image in the active source must receive one explicit decision:
 
 Allowed decisions:
 
-- `image`: embed the source image near the relevant node
-- `crop`: embed a readable crop of the source image
-- `redraw`: recreate as SVG or simple diagram
-- `omitted`: omit because it is decorative, duplicated, too blurry, or not useful
+- `preserve`: embed the source image near the relevant node because it is source-backed data or irreducible visual evidence
+- `redraw:<template_id>` or `redraw`: recreate through a registered SVG template in `assets/svg_templates/`
+- `omit`: omit because the figure is decorative, duplicated, too blurry, not useful, or lacks a registered redraw template
+
+Screenshot-like assets are not eligible for direct embed:
+
+- If `assets/images/index.json` says `type` is `screenshot`, `slide`, or `photo`, the effective decision must be `omit` unless the asset is explicitly marked as a real data chart or a registered redraw template matches.
+- `preserve` may embed only assets explicitly marked `type: "data_chart"`, `is_data_chart: true`, `redraw_required: false`, or other non-screenshot visual evidence approved by the Strategist.
+- A `redraw` decision must preserve `source_id`, `source_path`, `alt`, and `redraw_template_id`; coverage action should be `redraw`.
+- Missing redraw templates must downgrade to `omit` before rendering and validation must record the absence.
 
 ## Table Nodes
 
@@ -196,6 +204,35 @@ Rules:
 - A table node may have a short `summary`, but the table remains the primary content.
 - Table cells may contain LaTeX, but formulas must stay wrapped in `$...$` or `$$...$$`.
 
+## Keywords Nodes
+
+Use a `keywords` node when the source contains repeated terms, bold terms, or Chinese-English paired terminology.
+
+```json
+{
+  "id": "n_keywords",
+  "type": "keywords",
+  "title": "[*] 关键词",
+  "terms": ["Batch Size", "Epoch", "Shuffle", "Noisy Gradient"]
+}
+```
+
+Rules:
+
+- Use 8 to 12 terms when the source supports that many.
+- Terms must come from the active source, not general domain knowledge.
+- Keywords render as a horizontal capsule strip, usually near the summary area.
+
+## Tips Nodes
+
+Use a `tips` node only when the source explicitly contains practice advice, tuning guidance, cautions, or tips.
+
+Rules:
+
+- Do not generate a tips/takeaway node when the source has no such paragraph.
+- Tips nodes must include `source_quote` and complete-sentence details.
+- Added tips nodes that are not original headings must use a title prefixed with `[*]`.
+
 ## Mindmap JSON
 
 `intermediate/mindmap.json` is the Executor output. It is the final render tree.
@@ -216,6 +253,7 @@ Each node may include:
 
 - `id`
 - `type`
+- `section_id`
 - `title`
 - `description`
 - `summary`
@@ -296,10 +334,13 @@ PNG default scale: `2`.
 - `math_delimiter_checks`: failures where LaTeX-like strings appear outside math delimiters
 - `table_checks`: table node presence, required fields, and row/column integrity
 - `heading_coverage`: H2/H3 source headings mapped into the mind map
-- `image_decisions`: source images and their keep/crop/redraw/omit decisions
+- `section_numbering`: H2/H3 nodes preserve visible source numbers and parent/child placement
+- `image_decisions`: source images and their `preserve` / `redraw:<template_id>` / `omit` decisions
 - `layout_profile_checks`: legal layout mode, density score, and first-level branch coverage
 - `layout_readability`: export aspect ratio and balanced side-weight checks
 - `source_fidelity`: H2/H3, table, formula, and figure coverage after layout switching
+- `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
+- `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence
 
 ## Error Helper

@@ -26,6 +26,38 @@
 
 ---
 
+## 2026-05-10 · 图像策略改为 preserve/redraw/omit 三分法
+
+**背景**: 第二轮把 DOCX 截图禁止直嵌后,5 张截图被替换成高度相似的通用曲线占位图,没有真实信息价值。对比纯文字导图后确认:思维导图应以结构化文字为主,图像只作为少量例外。
+
+**选项**:
+- A: 继续截图默认重绘,逐步丰富重绘提示。
+- B: 改为 `preserve` / `redraw:<template_id>` / `omit` 三分法,默认 `omit`;只有真实数据图可 preserve,只有注册 SVG 模板可 redraw。
+
+**决策**: 选择 B,并推翻先前“DOCX 截图默认作为 SVG 重绘语义引用”的默认重绘部分。
+
+**理由**: 默认重绘会把低价值截图变成低价值占位 SVG;默认 omit 能强制节点文字承载信息。注册模板限制可以防止通用占位曲线再次进入最终 HTML。
+
+**影响**: 更新 `image-policy.md`、`SKILL.md`、Strategist/Executor references、`extract_assets.py`、`render_mindmap.py`、`batch_validate.py`;新增 `assets/svg_templates/` 和 `tests/` 回归。验证新增 `placeholder_curve_detection`、keywords、summary、H3 density 等阻塞检查。
+
+**状态**: 生效
+
+## 2026-05-10 · DOCX 截图默认作为 SVG 重绘语义引用
+
+**背景**: 第 5 节第二轮回归中,虽然 reference 写过“截图优先重绘”,但 6 张卡片里 5 张仍直接嵌入原 DOCX 截图,小图不可读且削弱脑图结构。
+
+**选项**:
+- A: 继续依赖 Strategist/Executor 的文字规则,由助手人工判断是否嵌图。
+- B: 在资产索引、渲染器和验证器三层落地硬约束:资产写入 `type` / `redraw_required`,渲染器把截图类资产转为 `redraw`,验证器阻塞 `<img>` 直嵌。
+
+**决策**: 选择 B。
+
+**理由**: 失败根因是规则停在 reference 层,没有进入中间数据和脚本执行层。把分类字段写入 `assets/images/index.json` 并由 `render_mindmap.py`、`batch_validate.py` 消费,可以让策略可验证、可回归。
+
+**影响**: 新增 `extract_assets.py`;更新 `render_mindmap.py`、`batch_validate.py`、`templates/markmap.html`、`SKILL.md` 和 references。截图类 DOCX/PDF/slide/photo 资产默认 `redraw_required: true`,除明确标为可读 `data_chart` 外不得直接嵌入。
+
+**状态**: 已推翻(见 2026-05-10 · 图像策略改为 preserve/redraw/omit 三分法)
+
 ## 2026-05-10 · 密集导图采用 layout_profile 驱动的双侧语义布局
 
 **背景**: 第 5 节课程内容包含 27 个导图节点、7 张教学图、1 张表和 1 个公式，默认 Markmap 容易导出为纵向长条，PNG/PDF 阅读体验差。

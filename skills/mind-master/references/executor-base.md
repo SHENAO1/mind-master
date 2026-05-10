@@ -53,6 +53,8 @@ Do not reread references during the same render pass.
 
 Nodes may include `type`, `description`, `summary`, `source_quote`, `table`, `equations`, `images`, `notes`, and `children` as defined in `mindmap-formats.md`.
 
+For `type: "keywords"`, render `terms` as a horizontal capsule strip. For `type: "tips"`, render only source-backed complete-sentence guidance; if the node lacks source evidence, fail validation rather than inventing advice.
+
 ## Rendering Rules
 
 1. Keep node titles short; put supporting points into markdown bullets under the node.
@@ -64,6 +66,7 @@ Nodes may include `type`, `description`, `summary`, `source_quote`, `table`, `eq
 7. Ensure the HTML can be opened offline.
 8. Preserve the final hierarchy in `mindmap.md`; the HTML must render that Markdown with Markmap.
 9. Do not use manual x/y coordinates for the main map. Layout belongs to Markmap and browser export.
+10. Do not directly embed assets whose `type` is `screenshot`, `slide`, or `photo`, or whose `redraw_required` is true. Normalize figure decisions to `preserve`, `redraw:<template_id>`, or `omit`; redraw may render only a registered SVG template, and missing templates must downgrade to `omit`.
 
 ## Layout Profile and Density Rules
 
@@ -107,8 +110,11 @@ When the source is a Word/PDF course note:
 
 - Render the H1/H2/H3 skeleton as headings in `mindmap.md`.
 - Render paragraph-level facts as concise bullets, not as long card descriptions.
+- If a node has fewer than two detail bullets, render the detail as plain text without numeric markers.
+- If a single detail bullet repeats the node description, render only the more specific version.
+- H3 heading nodes should render 4 to 6 source-backed details. If source text cannot support that density, merge the H3 into its parent or nearest sibling before rendering.
 - Keep source tables as Markdown tables under the owning node.
-- Keep figures near the node selected by `figure_decisions`.
+- Keep figure decisions near the node selected by `figure_decisions`; screenshot-like figures render only as registered-template redraws or are omitted with text density fallback.
 - Carry `coverage_report` and `figure_decisions` from `outline.json` into `mindmap.json`.
 
 ## Summary Rendering
@@ -123,9 +129,9 @@ The center/root node is the most important visual position and must contain:
 
 - title;
 - one sentence stating the core problem or learning question;
-- a compact list of first-level branches, 2 to 6 items.
+- 2 to 3 key terms from the source.
 
-Do not render the center as only a slogan or one-line tagline.
+Do not render the center as only a slogan or one-line tagline. Do not fill the center by directly listing child branch titles.
 
 ## Math Delimiter Rules
 

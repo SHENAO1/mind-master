@@ -41,6 +41,15 @@ Summaries are optional and must carry new information.
 - Fill `summary` only when the source has an explicit independent synthesis, signaled by words such as "therefore", "conclusion", "in summary", "因此", "结论", "综上", or an equivalent clearly summarizing sentence.
 - `description` and `summary` must not be synonymous. If they repeat each other, keep the more informative one and leave the other empty.
 - Renderers must not display empty "Conclusion", "结论", or summary slots.
+- Summary nodes such as `本节小结`, `本章小结`, or `summary` must preserve complete source-backed statements. Do not reduce them to noun phrases.
+- Each summary detail must be at least 15 visible Chinese characters or equivalent length in English, unless the source itself is shorter.
+- Each summary detail must contain a verb-like predicate and must not end as a bare nominal phrase such as `效率泛化折中` or `加入方向惯性`.
+
+## Detail Density
+
+- H3-level teaching nodes should contain 4 to 6 source-backed details when they remain independent cards.
+- If the source does not support four distinct details, merge the H3 into its parent or nearest sibling instead of padding the card with decorative images.
+- Image omission must trigger text density fallback: the related node should still carry a concept sentence and enough source-backed details to stand alone.
 
 ## Depth Limits
 

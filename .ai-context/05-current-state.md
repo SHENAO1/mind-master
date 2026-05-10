@@ -19,6 +19,9 @@
 - 已用新 reference 规则重生成第 5 节测试导图：`projects/ml_theory2_test/maps/lesson_05_regen/`，包含 outline/mindmap/validation/self_check 和 HTML/SVG/PNG/PDF 导出。
 - 已实现正式 Markmap 闭环脚本：`render_mindmap.py`、`batch_validate.py`、`export_mindmap.py` 与 `templates/markmap.html`；Step 6-8 不再依赖手写固定坐标海报。
 - 已实现 `layout_profile` 自适应布局：密度画像、双侧分支权重分配、双栏语义 HTML、导出适配、`layout_self_check.md` 与布局/保真校验。
+- 已基于第 5 节第二轮失败案例把截图策略落到执行层：新增 `extract_assets.py` 产出 `type` / `is_data_chart` / `redraw_required`；`render_mindmap.py` 会把截图类资产转为 `redraw`；`batch_validate.py` 会阻塞 HTML/Markdown 对截图类源图的 `<img>` 直嵌。
+- 已新增章节编号与层级校验：H2/H3 节点渲染时保留 `section_id` 和原文编号标题，校验 `section_numbering` 确保 H2 不消失、H3 不被提到一级。
+- 已新增 keywords/tips/summary 相关规则与校验：keywords 可渲染为胶囊条；tips 无原文证据会失败；summary 小结要点必须是完整句。
 
 ## 🚧 In Progress
 - 已为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏后的源文件为 `sources/ml_theory2_notes.docx`，可作为后续导图生成测试基线。
@@ -29,9 +32,12 @@
 - 2026-05-10 再次重生成 `lesson_05`，重新导出 HTML/SVG/PNG/PDF 并通过 `batch_validate.py`；本地预览可用 `projects/ml_theory2_test/maps/lesson_05/exports/lesson_05.html`。
 - 2026-05-10 根据用户反馈将双侧布局继续优化为横向中心放射式：根节点居中，分支枢纽与子卡片围绕分布，新增 root-to-branch / branch-to-child 连接曲线；`lesson_05` 导出视口为 2200x1120，校验记录 `connectorCount=12`。
 - 2026-05-10 修复 PDF 跨页和连接线错位：连接线改为浏览器按真实 DOM 位置动态计算，PDF 改为由高分辨率 PNG 生成单页；`lesson_05` 最新导出 `pdf_mode=single_page_png_pdf`，PNG 4400x2412，`connectorCount=11`。
+- 2026-05-10 按第二轮失败案例重跑 `lesson_05`：7 张源图均转为 `redraw`，HTML/Markdown `imageCount=0` 且 `source_image_policy` 通过；`section_numbering` 覆盖 9 个 H2/H3；浏览器校验 `connectorCount=11`、`katexErrors=0`，PNG 4400x3040，PDF 为单页 PNG PDF。
+- 2026-05-10 第三轮修正图像过度工程：图像策略改为 `preserve` / `redraw:<template_id>` / `omit` 三分法且默认 omit；删除通用占位曲线路径，新增 3 个注册 SVG 模板；`lesson_05` 最新决策为 1 张 preserve、3 张 registered redraw、3 张 omit。
+- 2026-05-10 补齐文字承载与回归：keywords 胶囊节点实际渲染 12 个术语，小结完整句与 H3 密度校验通过；新增 `skills/mind-master/tests/test_pipeline_regression.py` 和 `tests/fixtures/pipeline_regression_fixture.docx`，7 个 unittest 断言通过。
 
 ## ⏭️ Next
-- 下一轮应继续把 `lesson_05` 的 source-faithful outline 生成方式产品化，减少手工写 outline 的比例。
+- 下一轮应继续把 `lesson_05` 的 source-faithful outline 生成方式产品化，减少手工写 outline 的比例，并把第 6-8 节纳入新三分法与文字密度回归。
 - 继续复核第 6 节并用新的 `layout_profile` 链路重生成，确认多公式、多图场景下校验仍可靠。
 - 继续用同一方式生成 `lesson_07`、`lesson_08`；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。

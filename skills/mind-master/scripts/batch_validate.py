@@ -28,11 +28,17 @@ except AttributeError:  # pragma: no cover
 
 
 HEADING_RE = re.compile(r"^(#{2,3})\s+(.+?)\s*$", re.M)
+SECTION_ID_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\s*(.*)$")
 IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+HTML_IMG_RE = re.compile(r"<img\b[^>]*\bsrc=[\"']([^\"']+)[\"']", re.I)
 DISPLAY_MATH_RE = re.compile(r"\$\$(.+?)\$\$", re.S)
 INLINE_MATH_RE = re.compile(r"(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)", re.S)
 LATEX_LIKE_RE = re.compile(r"(?:_\{|[\^]\{|\\(?:frac|sum|nabla|theta|lambda|eta|sigma|alpha|beta|gamma|mu|Sigma)\b)")
 LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
+SCREENSHOT_EMBED_BLOCK_TYPES = {"screenshot", "slide", "photo"}
+SVG_BLOCK_RE = re.compile(r"<svg\b[^>]*>(.*?)</svg>", re.I | re.S)
+SVG_PATH_D_RE = re.compile(r"<path\b[^>]*\bd=[\"']([^\"']+)[\"']", re.I)
+SVG_COMMAND_RE = re.compile(r"[A-Za-z]")
 SVG_SIZE_RE = re.compile(r"<svg\b[^>]*?(?:width=\"([0-9.]+)[^\"]*\"[^>]*height=\"([0-9.]+)[^\"]*\"|height=\"([0-9.]+)[^\"]*\"[^>]*width=\"([0-9.]+)[^\"]*\")", re.I)
 SVG_VIEWBOX_RE = re.compile(r"viewBox=\"[^\"]*?\s+([0-9.]+)\s+([0-9.]+)\"", re.I)
 
@@ -130,7 +136,12 @@ def check_node_lengths(flat: list[tuple[dict[str, Any], int]]) -> dict[str, Any]
         if level == 0:
             continue
         title = str(node.get("title") or "")
-        limit = limits.get(level, 30)
+        if node_section_id(node):
+            limit = 42 if level >= 2 else 30
+        elif node.get("summary_sentence") or node.get("auto_density"):
+            limit = 90
+        else:
+            limit = limits.get(level, 30)
         length = visible_len(title)
         if length > limit:
             violations.append(
@@ -186,6 +197,72 @@ def check_math_delimiters(root: dict[str, Any], markdown: str) -> dict[str, Any]
 
 def source_headings(source_text: str) -> list[str]:
     return [match.group(2).strip() for match in HEADING_RE.finditer(source_text)]
+
+
+def section_id_from_heading(value: str) -> str:
+    match = SECTION_ID_RE.match(str(value or ""))
+    return match.group(1) if match else ""
+
+
+def section_depth(section_id: str) -> int:
+    return section_id.count(".") + 1 if section_id else 0
+
+
+def flatten_nodes_with_path(node: dict[str, Any], path: list[dict[str, Any]] | None = None) -> list[tuple[dict[str, Any], list[dict[str, Any]]]]:
+    path = list(path or [])
+    current_path = path + [node]
+    result = [(node, current_path)]
+    for child in node.get("children", []) or []:
+        if isinstance(child, dict):
+            result.extend(flatten_nodes_with_path(child, current_path))
+    return result
+
+
+def node_section_id(node: dict[str, Any]) -> str:
+    explicit = str(node.get("section_id") or "")
+    if explicit:
+        return explicit
+    return section_id_from_heading(str(node.get("title") or ""))
+
+
+def title_starts_with_section(node: dict[str, Any], section_id: str) -> bool:
+    return str(node.get("title") or "").strip().startswith(section_id)
+
+
+def check_section_numbering(source_text: str, root: dict[str, Any]) -> dict[str, Any]:
+    headings = [(heading, section_id_from_heading(heading)) for heading in source_headings(source_text)]
+    source_sections = [(heading, section_id) for heading, section_id in headings if section_id]
+    node_paths = flatten_nodes_with_path(root)
+    missing: list[dict[str, Any]] = []
+    title_failures: list[dict[str, Any]] = []
+    hierarchy_failures: list[dict[str, Any]] = []
+
+    for heading, section_id in source_sections:
+        matches = [(node, path) for node, path in node_paths if node_section_id(node) == section_id or title_starts_with_section(node, section_id)]
+        if not matches:
+            missing.append({"source_heading": heading, "section_id": section_id})
+            continue
+        for node, path in matches:
+            if not title_starts_with_section(node, section_id):
+                title_failures.append({"id": node.get("id"), "section_id": section_id, "title": node.get("title")})
+        depth = section_depth(section_id)
+        node, path = matches[0]
+        render_level = len(path) - 1
+        if depth == 2 and render_level != 1:
+            hierarchy_failures.append({"section_id": section_id, "expected": "first-level branch", "actual_level": render_level})
+        if depth >= 3:
+            parent_id = ".".join(section_id.split(".")[:2])
+            ancestor_ids = [node_section_id(ancestor) for ancestor in path[:-1]]
+            if parent_id not in ancestor_ids:
+                hierarchy_failures.append({"section_id": section_id, "expected_parent_section_id": parent_id})
+
+    return {
+        "passed": not missing and not title_failures and not hierarchy_failures,
+        "source_section_count": len(source_sections),
+        "missing": missing,
+        "title_failures": title_failures,
+        "hierarchy_failures": hierarchy_failures,
+    }
 
 
 def coverage_entries(outline: dict[str, Any], mindmap: dict[str, Any]) -> list[str]:
@@ -318,6 +395,137 @@ def check_rendered_images(markdown: str, exports_dir: Path) -> dict[str, Any]:
     return {"passed": not failures, "images": images, "failures": failures}
 
 
+def as_image_list(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, dict):
+        images = payload.get("images", [])
+    else:
+        images = payload
+    return [item for item in images if isinstance(item, dict)]
+
+
+def truthy(value: Any) -> bool:
+    return value is True or str(value).lower() in {"true", "1", "yes"}
+
+
+def image_asset_kind(asset: dict[str, Any]) -> str:
+    return str(asset.get("type") or asset.get("figure_kind") or asset.get("kind") or "").lower()
+
+
+def blocked_embed_asset(asset: dict[str, Any]) -> bool:
+    if str(asset.get("decision_hint") or "") == "preserve" and image_asset_kind(asset) == "data_chart":
+        return False
+    return image_asset_kind(asset) in SCREENSHOT_EMBED_BLOCK_TYPES or truthy(asset.get("redraw_required"))
+
+
+def image_asset_matches_src(asset: dict[str, Any], src: str) -> bool:
+    asset_path = str(asset.get("path") or asset.get("source_path") or "").replace("\\", "/")
+    if not asset_path:
+        return False
+    src_norm = src.replace("\\", "/")
+    return src_norm.endswith(asset_path) or Path(src_norm).name == Path(asset_path).name
+
+
+def embedded_image_sources(markdown: str, html_text: str) -> list[dict[str, str]]:
+    sources = [{"surface": "mindmap.md", "src": match.group(2)} for match in IMAGE_RE.finditer(markdown)]
+    sources.extend({"surface": "html", "src": match.group(1)} for match in HTML_IMG_RE.finditer(html_text))
+    return sources
+
+
+def check_source_image_policy(
+    markdown: str,
+    html_text: str,
+    outline: dict[str, Any],
+    mindmap: dict[str, Any],
+    images_index: Any,
+) -> dict[str, Any]:
+    assets = as_image_list(images_index)
+    assets_by_id = {str(item.get("id")): item for item in assets if item.get("id")}
+    figure_ids: set[str] = set()
+    for item in (outline.get("figure_decisions") or []) + (mindmap.get("figure_decisions") or []):
+        if isinstance(item, dict):
+            source_id = str(item.get("source_id") or item.get("id") or "")
+            if source_id:
+                figure_ids.add(source_id)
+
+    metadata_missing: list[dict[str, Any]] = []
+    for source_id in sorted(figure_ids):
+        asset = assets_by_id.get(source_id)
+        if not asset:
+            metadata_missing.append({"source_id": source_id, "missing": "asset index entry"})
+            continue
+        missing_fields = [field for field in ("type", "redraw_required") if field not in asset]
+        if missing_fields:
+            metadata_missing.append({"source_id": source_id, "missing": missing_fields})
+
+    violations: list[dict[str, Any]] = []
+    for source in embedded_image_sources(markdown, html_text):
+        asset = next((item for item in assets if image_asset_matches_src(item, source["src"])), None)
+        if asset and blocked_embed_asset(asset):
+            violations.append(
+                {
+                    "surface": source["surface"],
+                    "src": source["src"],
+                    "source_id": asset.get("id"),
+                    "type": image_asset_kind(asset),
+                    "redraw_required": asset.get("redraw_required"),
+                }
+            )
+
+    return {
+        "passed": not violations and not metadata_missing,
+        "blocked_embeds": violations,
+        "metadata_missing": metadata_missing,
+        "checked_assets": len(assets),
+    }
+
+
+def svg_signature(svg_inner: str) -> dict[str, Any]:
+    paths = SVG_PATH_D_RE.findall(svg_inner)
+    d_joined = "|".join(re.sub(r"\s+", " ", path.strip()) for path in paths)
+    commands = "".join(SVG_COMMAND_RE.findall(d_joined))
+    return {
+        "path_count": len(paths),
+        "d_length": len(d_joined),
+        "commands": commands,
+        "normalized": re.sub(r"[-+]?\d+(?:\.\d+)?", "N", d_joined),
+    }
+
+
+def signatures_too_similar(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    if not left["path_count"] or not right["path_count"]:
+        return False
+    if left["normalized"] and left["normalized"] == right["normalized"]:
+        return True
+    path_close = abs(left["path_count"] - right["path_count"]) <= 1
+    length_close = abs(left["d_length"] - right["d_length"]) <= max(12, min(left["d_length"], right["d_length"]) * 0.08)
+    commands_match = left["commands"] == right["commands"]
+    return path_close and length_close and commands_match
+
+
+def check_placeholder_curve_detection(html_text: str) -> dict[str, Any]:
+    signatures: list[dict[str, Any]] = []
+    for match in SVG_BLOCK_RE.finditer(html_text):
+        svg_text = match.group(0)
+        if "balanced-live-connectors" in svg_text:
+            continue
+        if "data-template-id" not in html_text[max(0, match.start() - 240) : match.start()]:
+            continue
+        signature = svg_signature(match.group(1))
+        signature["start"] = match.start()
+        signatures.append(signature)
+
+    similar_pairs: list[dict[str, Any]] = []
+    for index, left in enumerate(signatures):
+        for right_index, right in enumerate(signatures[index + 1 :], start=index + 1):
+            if signatures_too_similar(left, right):
+                similar_pairs.append({"left": index, "right": right_index, "path_count": left["path_count"]})
+    return {
+        "passed": not similar_pairs,
+        "inline_template_svg_count": len(signatures),
+        "similar_pairs": similar_pairs,
+    }
+
+
 def first_level_branch_ids(root: dict[str, Any]) -> list[str]:
     return [str(node.get("id")) for node in root.get("children", []) or [] if isinstance(node, dict) and node.get("id")]
 
@@ -432,13 +640,94 @@ def check_layout_readability(mindmap: dict[str, Any], paths: dict[str, Path]) ->
 
 
 def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
-    required = ["heading_coverage", "table_checks", "formula_coverage", "image_decisions"]
+    required = ["heading_coverage", "section_numbering", "table_checks", "formula_coverage", "image_decisions"]
     failures = [name for name in required if not checks.get(name, {}).get("passed", False)]
     return {
         "passed": not failures,
         "depends_on": required,
         "failed_checks": failures,
     }
+
+
+def check_tips_grounding(flat: list[tuple[dict[str, Any], int]]) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    tip_pattern = re.compile(r"(tips?|takeaway|实践|调参|启示|建议|小贴士|注意事项)", re.I)
+    for node, _ in flat:
+        title = str(node.get("title") or "")
+        is_tips = str(node.get("type") or "") == "tips" or bool(tip_pattern.search(title))
+        if is_tips and not str(node.get("source_quote") or "").strip():
+            failures.append({"id": node.get("id"), "title": title, "reason": "tips node requires source_quote"})
+    return {"passed": not failures, "failures": failures}
+
+
+def check_summary_sentences(root: dict[str, Any]) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    verb_re = re.compile(r"(是|为|通过|引入|依赖|参考|产生|实现|带来|提升|克服|负责|善用|增添|更新|缩短|改善|帮助|解释)")
+    nominal_ending_re = re.compile(r"(?:的)?(?:折中|惯性|机制|概念|方向|能力|影响|对比)$")
+    for node, path in flatten_nodes_with_path(root):
+        title = str(node.get("title") or "")
+        is_summary = str(node.get("type") or "") in {"summary", "note"} and re.search(r"(小结|总结|summary)", title, re.I)
+        if not is_summary:
+            continue
+        children = [child for child in node.get("children", []) or [] if isinstance(child, dict)]
+        for child in children:
+            child_title = str(child.get("title") or "")
+            if visible_len(child_title) < 15:
+                failures.append({"id": child.get("id"), "title": child_title, "reason": "summary detail must be >= 15 visible characters"})
+            elif not verb_re.search(child_title):
+                failures.append({"id": child.get("id"), "title": child_title, "reason": "summary detail must contain a verb-like predicate"})
+            elif nominal_ending_re.search(child_title):
+                failures.append({"id": child.get("id"), "title": child_title, "reason": "summary detail must not remain a nominal phrase"})
+    return {"passed": not failures, "failures": failures}
+
+
+def check_keywords_rendered(root: dict[str, Any], html_text: str, source_text: str) -> dict[str, Any]:
+    source_terms = [
+        term
+        for term in [
+            "Batch Size",
+            "Epoch",
+            "Shuffle",
+            "Noisy Gradient",
+            "Local Minima",
+            "Saddle Points",
+            "Flat Minima",
+            "Sharp Minima",
+            "Momentum",
+            "Gradient",
+            "Loss",
+            "GPU",
+        ]
+        if term.lower() in source_text.lower() or (term == "Saddle Points" and "saddle point" in source_text.lower())
+    ]
+    keyword_nodes = [node for node, _ in flatten_nodes(root) if node.get("type") == "keywords"]
+    pill_count = len(re.findall(r"class=[\"'][^\"']*\bkeywords-pill\b", html_text))
+    expected = min(8, len(source_terms))
+    passed = bool(keyword_nodes) and pill_count >= expected
+    return {
+        "passed": passed,
+        "source_term_count": len(source_terms),
+        "expected_min_pills": expected,
+        "keyword_node_count": len(keyword_nodes),
+        "pill_count": pill_count,
+    }
+
+
+def check_h3_density(root: dict[str, Any]) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    for node, path in flatten_nodes_with_path(root):
+        section_id = node_section_id(node)
+        if section_id.count(".") < 2:
+            continue
+        children = [child for child in node.get("children", []) or [] if isinstance(child, dict)]
+        density = len(children)
+        if node.get("equations"):
+            density += len(node.get("equations", []) or [])
+        if node.get("table"):
+            density += len((node.get("table") or {}).get("rows", []) or [])
+        if density < 4:
+            failures.append({"id": node.get("id"), "section_id": section_id, "title": node.get("title"), "detail_count": density})
+    return {"passed": not failures, "failures": failures}
 
 
 def find_node(node_arg: str | None) -> str | None:
@@ -553,6 +842,8 @@ def main(argv: list[str] | None = None) -> int:
         markdown = ctx["markdown"].read_text(encoding="utf-8")
         source_text = ctx["source"].read_text(encoding="utf-8") if ctx["source"].exists() else ""
         html_path = ctx["html"]
+        html_text = html_path.read_text(encoding="utf-8") if html_path.exists() else ""
+        images_index = load_json(ctx["images_index"], [])
         root = mindmap.get("root", {})
         flat = flatten_nodes(root)
 
@@ -577,16 +868,23 @@ def main(argv: list[str] | None = None) -> int:
         checks["source_quote"]["passed"] = not checks["source_quote"]["missing"] and not checks["source_quote"]["not_found"]
 
         checks["heading_coverage"] = check_heading_coverage(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
+        checks["section_numbering"] = check_section_numbering(source_text, root) if source_text else {"passed": True, "skipped": True}
         checks["table_checks"] = check_tables(flat, source_text)
         checks["formula_coverage"] = check_formula_coverage(root, source_text)
         checks["math_delimiter_checks"] = check_math_delimiters(root, markdown)
         checks["image_decisions"] = check_image_decisions(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
         checks["rendered_images"] = check_rendered_images(markdown, ctx["exports"])
+        checks["source_image_policy"] = check_source_image_policy(markdown, html_text, outline, mindmap, images_index)
+        checks["placeholder_curve_detection"] = check_placeholder_curve_detection(html_text)
         checks["layout_profile_checks"] = check_layout_profile(mindmap, root)
         checks["layout_readability"] = check_layout_readability(mindmap, ctx)
         if checks["layout_readability"].get("skipped"):
             warnings.append("Layout readability export ratio check skipped because PNG/SVG exports are not present yet.")
         checks["source_fidelity"] = check_source_fidelity(checks)
+        checks["tips_grounding"] = check_tips_grounding(flat)
+        checks["summary_sentence_checks"] = check_summary_sentences(root)
+        checks["keywords_rendered"] = check_keywords_rendered(root, html_text, source_text)
+        checks["h3_density"] = check_h3_density(root)
         if args.skip_browser:
             checks["browser"] = {"passed": True, "skipped": True}
             warnings.append("Browser validation skipped by --skip-browser.")

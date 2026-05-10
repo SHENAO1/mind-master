@@ -20,6 +20,18 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 完成第三轮 Mind-Master 迭代：将图像策略从“直嵌 vs 重绘”改为 `preserve` / `redraw:<template_id>` / `omit` 三分法且默认 omit；新增 `assets/svg_templates/` 三个注册模板；`extract_assets.py` 产出 `decision_hint` / `redraw_template_id`，`render_mindmap.py` 删除通用占位曲线并按模板/omit 执行，`batch_validate.py` 新增占位曲线、keywords、小结完整句、H3 密度等阻塞检查。同步更新 SKILL 与 references，新增 unittest 回归和 `pipeline_regression_fixture.docx`。
+**进行中 / In progress**: 已用最新链路重跑 `projects/ml_theory2_test` 的 `lesson_05`：决策矩阵为 `fig_p38_004=preserve`，`fig_p32_003/fig_p46_006/fig_p63_008=redraw:<template>`，`fig_p23_002/fig_p43_005/fig_p56_007=omit`；浏览器校验通过，PNG/PDF 已导出，`python -m unittest discover -s skills/mind-master/tests -p "test_*.py"` 7 项通过。
+**下一步建议 / Next**: 用同一三分法重跑第 6-8 节，重点观察真实数据图误判、模板覆盖不足和 H3 自动补抽是否需要章节级微调；继续把 outline 生成产品化。
+**注意 / Watch out**: 新策略推翻了“截图默认重绘”的默认行为；没有注册模板的截图会 omit，所以节点文字密度必须足够。生成产物仍在 ignored 的 `projects/ml_theory2_test/`。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 基于第 5 节第二轮失败案例继续迭代 Mind-Master Skill：新增 `extract_assets.py` 生成 `type` / `is_data_chart` / `redraw_required`；`render_mindmap.py` 会把 screenshot/slide/photo 或 `redraw_required=true` 的资产转为 `redraw` 并渲染 SVG 重绘占位；`batch_validate.py` 新增 `source_image_policy`、`section_numbering`、`tips_grounding`、`summary_sentence_checks` 等阻塞校验。同步更新 SKILL 和 references，强化截图不得直嵌、章节编号保真、H2/H3 两级结构、紧凑卡片、keywords/tips 和小结完整句规则。
+**进行中 / In progress**: 已完整回归 `projects/ml_theory2_test` 的 `lesson_05`：Step 3/6/7/8 通过，浏览器校验 `balanced_two_sided`、`connectorCount=11`、`katexErrors=0`、`imageCount=0`；7 张第 5 节源图均转为 `redraw`，PNG 4400x3040，PDF 仍为 `single_page_png_pdf`。
+**下一步建议 / Next**: 将本轮新增校验拆成最小 fixtures/单元测试，尤其覆盖截图拦截、section_id 层级、无 tips 段落不生成 tips；再用第 6-8 节回归确认多图/多公式章节不会误拦截真实 data_chart。
+**注意 / Watch out**: `extract_assets.py` 当前使用启发式分类；真实数据图若需要保留原图，需在资产索引中显式设为 `type: "data_chart"`, `is_data_chart: true`, `redraw_required: false`。生成产物位于 ignored 的 `projects/ml_theory2_test/`。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 针对用户指出的 PDF 跨页和连接线断开问题做修正：连接线从静态百分比路径改为浏览器按真实 DOM 位置动态计算；PDF 导出从 Chromium 打印页改为高分辨率 PNG 生成单页 PDF。重新生成 `lesson_05` 并验证通过，`export.json` 记录 `pdf_mode=single_page_png_pdf`、PNG 4400x2412、SVG 2200x1120，`validation.json` 记录 `connectorCount=11`、7 张图、2 个 KaTeX 节点。
 **进行中 / In progress**: 最新第 5 节导出位于 `projects/ml_theory2_test/maps/lesson_05/exports/`；本地预览服务仍可用于查看。
 **下一步建议 / Next**: 如果用户希望更像参考图，可继续优化连接线层级和分支分布：增加分支图标、粗细渐变、关键词带，以及将源图可选压缩/裁剪成更小的教学图块。

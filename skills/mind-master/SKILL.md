@@ -44,6 +44,8 @@ DOCX/PDF
 6. External screenshot safety gate. Before opening any external URL, list every target URL and wait for explicit user confirmation. Local PDF screenshots are allowed without that URL gate.
 7. Keep equations editable. Equations must remain LaTeX text in HTML and render through KaTeX. Do not rasterize formulas into images.
 8. OCR informs image relevance only. Do not rewrite node text from OCR.
+9. Output filtering hard constraints must land in three layers: reference docs, executor/render behavior, and validation checks. If any layer is missing, the constraint is not implemented.
+10. Mind maps are text-first. Source figures normalize to `preserve`, `redraw:<template_id>`, or `omit`; `omit` is the default. Screenshots/slides/photos must not be directly embedded through `<img>`, and redraw is allowed only through a registered SVG template.
 
 ## Required References
 
@@ -165,6 +167,8 @@ Image/Screenshot GATE: 我准备对以下外部 URL 截图。请确认后我才�
 
 If there are no external URL intents, say so and continue. Local PDF page rendering does not require this URL gate, but still record generated screenshots in `assets/images/index.json`.
 
+Document images extracted in Step 1 still pass through Step 3 classification. The image index must include `type`, `is_data_chart`, and `redraw_required` for every image before Step 4/5 decisions.
+
 ## Step 1. Convert Source to Markdown
 
 Role: source converter.
@@ -278,6 +282,7 @@ Outputs:
 
 - `projects/<project_name>/assets/images/index.json`
 - all extracted document images under `projects/<project_name>/assets/images/`
+- image metadata fields: `type`, `is_data_chart`, `redraw_required`, `decision_hint`, optional `redraw_template_id`, optional `redraw_instruction`
 - optional `ocr_text` fields when OCR is available
 
 Checkpoint:
@@ -373,6 +378,14 @@ Failure helper:
 ## Step 5. Image/Screenshot Decision
 
 Role: image curator and screenshot operator.
+
+Before selecting images:
+
+1. Read `assets/images/index.json`.
+2. Normalize every figure to one of `preserve`, `redraw:<template_id>`, or `omit`; default to `omit`.
+3. Use `preserve` only for source-backed data charts or irreducible visual evidence classified as `type: "data_chart"`, `is_data_chart: true`, and `redraw_required: false`.
+4. Use `redraw:<template_id>` only when `assets/svg_templates/<template_id>.svg` exists. Missing templates must downgrade to `omit`.
+5. Do not set `decision: "image"` or `decision: "crop"` for screenshots, slides, or photos unless the asset has been explicitly reclassified as a preserve-worthy data chart.
 
 Before external URL screenshots:
 
@@ -495,13 +508,27 @@ Checks:
 - no `.katex-error`
 - every image has alt text
 - every referenced image exists
+- screenshot/slide/photo assets are not directly embedded unless explicitly preserved as data charts
+- repeated generic placeholder SVG curves are absent
 - max depth is respected
 - node word limits are respected
 - H2/H3 coverage is complete through `coverage_report`
+- source H2/H3 section numbers are visible in rendered node titles and `section_id` metadata
 - every source table, display formula, and active-section image has an explicit disposition
+- keywords nodes render as capsule terms when source terms support them
+- summary details are complete source-backed sentences, not noun phrases
+- H3 nodes carry at least four details or are merged before render
 - `layout_profile` has a legal mode, density score, and complete first-level branch weights
 - exported PNG/SVG aspect ratio is not an extreme vertical strip when exports exist
 - `source_fidelity` remains complete after layout switching
+
+Regression command before Step 8:
+
+```bash
+python -m unittest discover -s skills/mind-master/tests -p "test_*.py"
+```
+
+Any regression failure blocks export.
 
 Checkpoint:
 

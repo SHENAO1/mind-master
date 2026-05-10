@@ -45,7 +45,7 @@ Write valid JSON:
 1. Preserve the author's argument structure before optimizing layout.
 2. Keep node labels short according to `shared-standards.md`.
 3. Put formulas on the most relevant node.
-4. Treat images as candidates only. Do not force inclusion.
+4. Treat source images with the three-way policy: `preserve` for real data charts, `redraw:<template_id>` only when a registered SVG template exists, and `omit` by default.
 5. Use OCR text only to judge image relevance.
 6. Register external referenced visuals as `screenshot_intents`; do not fetch them in this step.
 7. Keep IDs stable and simple: `n1`, `n1_1`, `n1_2`.
@@ -58,6 +58,8 @@ Write valid JSON:
 For Word/PDF course notes, the primary job is faithful conversion into a readable mind map, not poster-style reinterpretation.
 
 - Preserve the active H1/H2/H3 teaching skeleton unless the user explicitly requests a different synthesis.
+- Heading nodes must preserve their original section number visibly in `title`, for example `5.1.1 Batch 的定义`. Do not replace numbered source headings with only conceptual labels such as `效率机制`.
+- Each H2/H3 heading node must carry `section_id`. Nodes that do not correspond to an original source heading but are added by the Strategist must start their title with `[*]`.
 - Convert paragraphs into concise leaf bullets under the nearest heading node instead of compressing several paragraphs into one oversized card description.
 - Preserve source tables, display formulas, and instructional figures as first-class outline items.
 - `本节小结` / `本章小结` can summarize the section, but it must not replace earlier body content.
@@ -70,6 +72,7 @@ The outline must preserve the source's main skeleton.
 - First-level outline branches must correspond to the source H2 headings or the highest semantic group under the active section. Do not promote H3 subsections to first-level branches just to get more branches.
 - If the source clearly has a two-part or multi-part structure, such as "Topic A vs Topic B", keep those topics as first-level branches and place their subsections below them.
 - In section map mode, the active H1 section is the root, its H2 headings become first-level branches, and its H3 headings become second-level nodes unless there is a documented reason to merge them.
+- Under `balanced_two_sided`, the H2 branch root remains visible, such as `5.1 Batch`, and its H3 nodes remain one layer below it. Do not flatten `5.1.1` through `5.1.4` into independent first-level cards.
 - If a style prefers 4 to 7 branches but the source has fewer H2 groups, preserve the source groups. Do not flatten lower-level sections to satisfy branch-count preference.
 
 Hierarchy GATE:
@@ -131,6 +134,7 @@ Rules:
 Concrete source detail should survive abstraction.
 
 - Preserve specific numbers, ranges, examples, named concepts, and comparison dimensions as node details or table rows.
+- An independent H3 node must carry 4 to 6 source-backed details when rendered as its own card. If the source cannot support at least four details and there is no formula/table attached, merge that material into the nearest sibling or parent instead of creating a sparse standalone card.
 - Do not replace "20 training examples", "Batch Size 1~1000", or "10000~60000" with only "small" or "large".
 - Do not split a source comparison table into unrelated sibling branches. Preserve it as a `table` node when the table is central to the explanation.
 - For comparison tables, keep the original column and row dimensions unless a column is empty or duplicative.
@@ -158,6 +162,15 @@ After drafting but before the hierarchy GATE:
 - `summary` is optional. Do not manufacture a "conclusion" for every node.
 - Fill `summary` only when the source includes an explicit independent summary sentence.
 - If a node's `description` and `summary` repeat each other, keep only the more informative field.
+
+## Keywords and Tips Rules
+
+- Scan the active source for bold terms, repeated technical terms, and Chinese-English paired terms such as `Noisy Gradient`.
+- When enough terms exist, create one `type: "keywords"` node with `title: "[*] 关键词"` and `terms` containing 8 to 12 source-backed terms.
+- Keywords must come from the active source; do not add domain terms just because they are common.
+- Keywords nodes still need a traceable `source_quote`; use a real source sentence containing one or more of the listed terms, not a synthetic joined list.
+- Create a `type: "tips"` node only when the source explicitly contains practice advice, tuning guidance, cautions, or tips.
+- If the source has no practice/tuning/tips paragraph, do not generate a tips node. In particular, do not invent a `调参启示` node for a lesson that lacks such source content.
 
 ## Grouping and Opposition Map
 
