@@ -135,7 +135,7 @@ The coverage report records where source content went. It prevents the map from 
 }
 ```
 
-Actions are `node`, `table`, `formula`, `preserve`, `redraw`, or `omit`.
+Actions are `node`, `table`, `formula`, `preserve`, `crop_preserve`, `redraw`, or `omit`.
 
 ## Figure Decisions
 
@@ -160,13 +160,15 @@ Every image in the active source must receive one explicit decision:
 Allowed decisions:
 
 - `preserve`: embed the source image near the relevant node because it is source-backed data or irreducible visual evidence
+- `crop_preserve`: crop a source figure to its evidence-bearing region, save the derivative locally, and embed the crop while preserving provenance
 - `redraw:<template_id>` or `redraw`: recreate through a registered SVG template in `assets/svg_templates/`
 - `omit`: omit because the figure is decorative, duplicated, too blurry, not useful, or lacks a registered redraw template
 
 Screenshot-like assets are not eligible for direct embed:
 
-- If `assets/images/index.json` says `type` is `screenshot`, `slide`, or `photo`, the effective decision must be `omit` unless the asset is explicitly marked as a real data chart or a registered redraw template matches.
+- If `assets/images/index.json` says `type` is `screenshot`, `slide`, or `photo`, the effective decision must be `crop_preserve`, `redraw`, or `omit` unless the asset is explicitly marked as a real data chart.
 - `preserve` may embed only assets explicitly marked `type: "data_chart"`, `is_data_chart: true`, `redraw_required: false`, or other non-screenshot visual evidence approved by the Strategist.
+- A `crop_preserve` decision must preserve `source_id`, `source_path`, `alt`, `crop_box`, `crop_source_id`, and `crop_path`; coverage action should be `crop_preserve`.
 - A `redraw` decision must preserve `source_id`, `source_path`, `alt`, and `redraw_template_id`; coverage action should be `redraw`.
 - Missing redraw templates must downgrade to `omit` before rendering and validation must record the absence.
 
@@ -221,7 +223,8 @@ Rules:
 
 - Use 8 to 12 terms when the source supports that many.
 - Terms must come from the active source, not general domain knowledge.
-- Keywords render as a horizontal capsule strip, usually near the summary area.
+- Keywords render as a horizontal bottom capsule strip in GPT Image 2 inspired layouts.
+- Keywords are derived nodes, not source chapters; keep the `[*]` prefix and do not assign source-style section numbers.
 
 ## Tips Nodes
 
@@ -232,6 +235,7 @@ Rules:
 - Do not generate a tips/takeaway node when the source has no such paragraph.
 - Tips nodes must include `source_quote` and complete-sentence details.
 - Added tips nodes that are not original headings must use a title prefixed with `[*]`.
+- Derived tuning hints must mark each item with `derived_from_summary` or `grounded_hint`; they must never be numbered as `5.4`, `5.5`, etc.
 
 ## Mindmap JSON
 
@@ -339,6 +343,8 @@ PNG default scale: `2`.
 - `layout_profile_checks`: legal layout mode, density score, and first-level branch coverage
 - `layout_readability`: export aspect ratio and balanced side-weight checks
 - `source_fidelity`: H2/H3, table, formula, and figure coverage after layout switching
+- `no_extra_section_numbers`: rendered source-style section IDs must be drawn only from active source headings
+- `figure_decision_values`: all source figures use only `preserve`, `crop_preserve`, `redraw`, or `omit`; crop files exist
 - `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
 - `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence

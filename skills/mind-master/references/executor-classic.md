@@ -21,6 +21,7 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 
 - Use the default shared palette with branch-specific accent colors.
 - Root should be visually strongest.
+- For GPT Image 2 inspired source-faithful maps, the root is a large center card with the exact source lesson title and a short source-grounded learning question.
 - Level 1 nodes use accent color.
 - Level 2 and leaves use white or light tinted fills.
 - Images should appear near the node they explain, not near the root.
@@ -32,6 +33,7 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Child cards should remain compact. Use a maximum width around 320 px; wrap long titles/content rather than stretching cards into dashboard panels.
 - Sibling cards under the same H2 may stack tightly. Do not force equal spacing when a compact cluster is more readable.
 - Connect child cards back to the H2 branch hub with same-color thin connectors so cards do not appear to float independently.
+- Render keyword nodes (`[*] 关键词`) as a bottom capsule strip; do not give them invented source numbers.
 
 ## Adaptive Layout
 
@@ -55,6 +57,12 @@ In `balanced_two_sided`, place the root in the center and distribute first-level
 
 For course-note maps such as Lesson 5, the left or right side branch root is the H2 node itself, for example `5.1 Batch`, with `5.1.1` through `5.1.4` rendered one layer below it. Never flatten H3 sections into peer cards beside the H2 root.
 
+Lesson 5 preferred balance:
+
+- left: `5.1 Batch（批次）`
+- right: `5.2 Momentum（动量）` and `5.3 本章小结`
+- bottom: `[*] 关键词` and optional `[*] 调参启示` only when grounded
+
 ## Content Rules
 
 - Level 1 labels: <= 12 Chinese characters.
@@ -65,6 +73,7 @@ For course-note maps such as Lesson 5, the left or right side branch root is the
 - Keep comparison tables visually intact. Do not turn table rows into separate radial branches.
 - If a node has fewer than two bullet details, render the detail as plain body text, not as a numbered list.
 - H3 child cards should normally contain 4 to 6 source-backed details. Do not stretch sparse cards with filler visuals; omit unmatched images and make the text do the work.
+- If an H3 needs auto density, extract only from that H3's `source_span` and bind every added item to a source line.
 
 ## Error Helper
 
@@ -72,5 +81,5 @@ If classic output feels crowded:
 
 1. Generate or correct `layout_profile` and switch to `balanced_two_sided` when thresholds are met.
 2. Convert minor leaves into `description` or `notes` only when source fidelity remains traceable.
-3. For screenshot-like source assets, use `omit` unless a registered SVG template exists; for true data charts, preserve at readable size before considering omission.
+3. For screenshot-like source assets, use `crop_preserve` for source-faithful learning evidence, `redraw:<template_id>` when a registered template exists, or `omit`; for true data charts, preserve at readable size before considering omission.
 4. Keep formulas and source tables even if the layout must become wider.

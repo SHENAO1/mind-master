@@ -35,9 +35,12 @@
 - 2026-05-10 按第二轮失败案例重跑 `lesson_05`：7 张源图均转为 `redraw`，HTML/Markdown `imageCount=0` 且 `source_image_policy` 通过；`section_numbering` 覆盖 9 个 H2/H3；浏览器校验 `connectorCount=11`、`katexErrors=0`，PNG 4400x3040，PDF 为单页 PNG PDF。
 - 2026-05-10 第三轮修正图像过度工程：图像策略改为 `preserve` / `redraw:<template_id>` / `omit` 三分法且默认 omit；删除通用占位曲线路径，新增 3 个注册 SVG 模板；`lesson_05` 最新决策为 1 张 preserve、3 张 registered redraw、3 张 omit。
 - 2026-05-10 补齐文字承载与回归：keywords 胶囊节点实际渲染 12 个术语，小结完整句与 H3 密度校验通过；新增 `skills/mind-master/tests/test_pipeline_regression.py` 和 `tests/fixtures/pipeline_regression_fixture.docx`，7 个 unittest 断言通过。
+- 2026-05-10 完成第 5 节 Word 原文、当前 Skill 导图与 GPT Image 2 参考导图的复盘：确认当前导图源保真更强，但视觉密度、中心放射布局、截图取舍和自动密度补抽仍需继续优化；GPT Image 2 参考图视觉更清晰但含非原文章节编号。
+- 2026-05-10 已实现 “GPT Image 2 inspired but source-faithful” profile：图像策略扩展为 `preserve` / `crop_preserve` / `redraw` / `omit`，新增伪章节编号校验和 section-local 自动密度补抽；`lesson_05` 重新生成并通过完整验证。
 
 ## ⏭️ Next
 - 下一轮应继续把 `lesson_05` 的 source-faithful outline 生成方式产品化，减少手工写 outline 的比例，并把第 6-8 节纳入新三分法与文字密度回归。
+- 下一轮可把同一 profile 应用于第 6-8 节，重点观察多公式、多图章节下 `crop_preserve` 的裁剪质量和伪章节编号校验是否过严。
 - 继续复核第 6 节并用新的 `layout_profile` 链路重生成，确认多公式、多图场景下校验仍可靠。
 - 继续用同一方式生成 `lesson_07`、`lesson_08`；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。

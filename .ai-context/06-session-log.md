@@ -20,6 +20,18 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 实现 “GPT Image 2 inspired but source-faithful” Mind-Master profile：Skill/reference 同步四分图像策略 `preserve` / `crop_preserve` / `redraw` / `omit`，渲染器新增裁剪派生产物，验证器新增伪章节编号白名单和 figure decision value 检查，自动密度补抽改为只使用所属 `source_span` 且不硬截断英文词。
+**进行中 / In progress**: 已重新生成 `projects/ml_theory2_test/maps/lesson_05` 并导出 HTML/SVG/PNG/PDF；`batch_validate.py` 完整通过，浏览器检查 `katexErrors=0`、`imageCount=4`、`connectorCount=11`。图片决策为 `fig_p38_004=preserve`，`fig_p46_006/fig_p56_007/fig_p63_008=crop_preserve`，`fig_p32_003=redraw`，`fig_p23_002/fig_p43_005=omit`。
+**下一步建议 / Next**: 用同一 profile 回归第 6-8 节；如需更高图片可读性，可为每类教学截图补充更精细的 per-figure `crop_box` 或注册 SVG 模板。
+**注意 / Watch out**: `crop_preserve` 会生成 `assets/images/crops/*_crop.png` 派生产物；原始 screenshot/slide/photo 仍不得作为 raw `<img>` 直嵌。关键词和调参启示必须保持 `[*]` 派生节点，不得伪装成源文章节。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 复盘第 5 节 Word 原文、当前 Skill 导图和用户提供的 GPT Image 2 参考导图。确认当前版本覆盖原文 5.1/5.2/5.3、表 5-1、公式 5-1 和图片决策，源保真优于参考图；同时指出 GPT Image 2 风格在中心主题、图标、编号列表和紧凑横向阅读上更成熟。
+**进行中 / In progress**: 本轮未改生成代码；结论是下一版应走 “GPT Image 2 inspired but source-faithful” 混合方案，把关键原文截图/裁剪图嵌入高层节点，同时保留 source_quote 和校验。
+**下一步建议 / Next**: 优先实现图像 salience 评分与 crop/callout 机制，重点保留或高保真重绘 `fig_p38_004`、`fig_p46_006`、`fig_p56_007`、`fig_p63_008`，可选加入 `fig_p32_003`；修复自动密度补抽跨 section 和硬截断问题。
+**注意 / Watch out**: GPT Image 2 参考图含原文不存在的 `5.2.3 Momentum 的优势`、`5.4 关键词`、`5.5 调参启示` 等编号；若加入关键词/调参启示，应作为非编号派生节点并标记来源。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 完成第三轮 Mind-Master 迭代：将图像策略从“直嵌 vs 重绘”改为 `preserve` / `redraw:<template_id>` / `omit` 三分法且默认 omit；新增 `assets/svg_templates/` 三个注册模板；`extract_assets.py` 产出 `decision_hint` / `redraw_template_id`，`render_mindmap.py` 删除通用占位曲线并按模板/omit 执行，`batch_validate.py` 新增占位曲线、keywords、小结完整句、H3 密度等阻塞检查。同步更新 SKILL 与 references，新增 unittest 回归和 `pipeline_regression_fixture.docx`。
 **进行中 / In progress**: 已用最新链路重跑 `projects/ml_theory2_test` 的 `lesson_05`：决策矩阵为 `fig_p38_004=preserve`，`fig_p32_003/fig_p46_006/fig_p63_008=redraw:<template>`，`fig_p23_002/fig_p43_005/fig_p56_007=omit`；浏览器校验通过，PNG/PDF 已导出，`python -m unittest discover -s skills/mind-master/tests -p "test_*.py"` 7 项通过。
 **下一步建议 / Next**: 用同一三分法重跑第 6-8 节，重点观察真实数据图误判、模板覆盖不足和 H3 自动补抽是否需要章节级微调；继续把 outline 生成产品化。

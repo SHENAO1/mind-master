@@ -13,6 +13,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from PIL import Image, ImageChops
+except ImportError:  # pragma: no cover - surfaced as an omit fallback for crop_preserve
+    Image = None  # type: ignore[assignment]
+    ImageChops = None  # type: ignore[assignment]
+
 try:  # Keep checkpoint symbols printable on Windows consoles.
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -27,8 +33,9 @@ SVG_TEMPLATE_DIR = SKILL_DIR / "assets" / "svg_templates"
 MATH_DELIMITER_RE = re.compile(r"^\s*(?:\$.*\$\s*|\$\$.*\$\$\s*|\\\(.*\\\)\s*|\\\[.*\\\]\s*)$", re.S)
 SECTION_ID_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\s*(.*)$")
 LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
-PRESERVE_IMAGE_DECISIONS = {"preserve", "image", "embed_source", "keep", "crop"}
-IMAGE_LAYOUT_DECISIONS = PRESERVE_IMAGE_DECISIONS | {"redraw", "redraw_svg"}
+PRESERVE_IMAGE_DECISIONS = {"preserve", "image", "embed_source", "keep"}
+CROP_IMAGE_DECISIONS = {"crop_preserve", "crop", "crop-preserve"}
+IMAGE_LAYOUT_DECISIONS = PRESERVE_IMAGE_DECISIONS | CROP_IMAGE_DECISIONS | {"redraw", "redraw_svg"}
 SCREENSHOT_EMBED_BLOCK_TYPES = {"screenshot", "slide", "photo"}
 REGISTERED_TEMPLATES = {
     "loss_landscape_sharp_vs_flat": SVG_TEMPLATE_DIR / "loss_landscape_sharp_vs_flat.svg",
@@ -154,6 +161,75 @@ def image_path_for_markdown(project_path: Path, exports_dir: Path, image_path: s
     return Path(os.path.relpath(absolute, exports_dir)).as_posix()
 
 
+def source_image_absolute(project_path: Path, image_path: str) -> Path:
+    raw = Path(image_path)
+    return raw if raw.is_absolute() else project_path / raw
+
+
+def clamp_crop_box(crop_box: tuple[int, int, int, int], width: int, height: int) -> tuple[int, int, int, int] | None:
+    left, top, right, bottom = crop_box
+    left = max(0, min(width - 1, left))
+    top = max(0, min(height - 1, top))
+    right = max(left + 1, min(width, right))
+    bottom = max(top + 1, min(height, bottom))
+    if right - left < 20 or bottom - top < 20:
+        return None
+    return left, top, right, bottom
+
+
+def parse_crop_box(value: Any, width: int, height: int) -> tuple[int, int, int, int] | None:
+    if isinstance(value, dict):
+        left = int(value.get("left", value.get("x", 0)) or 0)
+        top = int(value.get("top", value.get("y", 0)) or 0)
+        if "right" in value or "bottom" in value:
+            right = int(value.get("right", width) or width)
+            bottom = int(value.get("bottom", height) or height)
+        else:
+            right = left + int(value.get("width", width - left) or width - left)
+            bottom = top + int(value.get("height", height - top) or height - top)
+        return clamp_crop_box((left, top, right, bottom), width, height)
+    if isinstance(value, (list, tuple)) and len(value) == 4:
+        return clamp_crop_box(tuple(int(float(part)) for part in value), width, height)
+    return None
+
+
+def auto_trim_box(image: Any) -> tuple[int, int, int, int] | None:
+    if ImageChops is None:
+        return None
+    background = Image.new(image.mode, image.size, image.getpixel((0, 0)))
+    diff = ImageChops.difference(image, background)
+    bbox = diff.getbbox()
+    if not bbox:
+        return None
+    left, top, right, bottom = bbox
+    pad = 12
+    return clamp_crop_box((left - pad, top - pad, right + pad, bottom + pad), image.width, image.height)
+
+
+def crop_image_for_visual(project_path: Path, raw: dict[str, Any], asset: dict[str, Any], source_id: str) -> str:
+    if Image is None:
+        return ""
+    image_path = raw.get("path") or asset.get("path")
+    if not image_path:
+        return ""
+    absolute = source_image_absolute(project_path, str(image_path))
+    if not absolute.exists():
+        return ""
+    crops_dir = project_path / "assets" / "images" / "crops"
+    crops_dir.mkdir(parents=True, exist_ok=True)
+    crop_path = crops_dir / f"{source_id}_crop.png"
+    with Image.open(absolute) as image:
+        working = image.convert("RGBA")
+        crop_box = parse_crop_box(raw.get("crop_box") or asset.get("crop_box"), working.width, working.height)
+        if not crop_box:
+            crop_box = auto_trim_box(working) or (0, 0, working.width, working.height)
+        working.crop(crop_box).save(crop_path)
+        raw["crop_box"] = list(crop_box)
+    raw["crop_path"] = project_relative(project_path, crop_path)
+    raw["crop_source_id"] = source_id
+    return raw["crop_path"]
+
+
 def figure_decisions_by_node(outline: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     decisions: dict[str, list[dict[str, Any]]] = {}
     for item in outline.get("figure_decisions", []) or []:
@@ -204,13 +280,15 @@ def template_id_for(raw: dict[str, Any], asset: dict[str, Any]) -> str:
 
 
 def effective_visual_decision(raw: dict[str, Any], asset: dict[str, Any]) -> tuple[str, str]:
-    """Return preserve/redraw/omit and optional template id."""
+    """Return preserve/crop_preserve/redraw/omit and optional template id."""
     decision = str(raw.get("decision") or "").lower()
     hint = str(raw.get("decision_hint") or asset.get("decision_hint") or "").lower()
     template_id = template_id_for(raw, asset)
 
     if decision in {"omitted", "omit", "no image"}:
         return "omit", ""
+    if decision in CROP_IMAGE_DECISIONS or hint in CROP_IMAGE_DECISIONS:
+        return "crop_preserve", ""
     if hint == "preserve" or asset_kind(raw, asset) == "data_chart":
         return "preserve", ""
     if decision in {"preserve", "image", "embed_source", "keep", "crop"}:
@@ -242,6 +320,7 @@ def apply_image_policy(outline: dict[str, Any], images_by_id: dict[str, dict[str
     """Normalize figure decisions according to preserve/redraw/omit policy."""
     report = {
         "preserve": [],
+        "crop_preserve": [],
         "redraw": [],
         "omit": [],
         "redraw_template_missing": [],
@@ -262,6 +341,11 @@ def apply_image_policy(outline: dict[str, Any], images_by_id: dict[str, dict[str
         if effective == "preserve":
             item["redraw_required"] = False
             report["preserve"].append(source_id)
+        elif effective == "crop_preserve":
+            item["redraw_required"] = False
+            item["decision"] = "crop_preserve"
+            item["effective_decision"] = "crop_preserve"
+            report["crop_preserve"].append(source_id)
         elif effective == "redraw":
             item["redraw_required"] = True
             item["redraw_template_id"] = template_id
@@ -450,17 +534,71 @@ def ensure_keywords_node(outline: dict[str, Any], source_text: str) -> None:
     )
 
 
+def smart_truncate(value: str, limit: int = 70) -> str:
+    value = re.sub(r"\s+", " ", str(value or "").strip())
+    if visible_text_len(value) <= limit:
+        return value
+    cutoff = min(len(value), limit)
+    while cutoff > 0 and value[cutoff - 1].isascii() and value[cutoff - 1].isalnum():
+        if cutoff >= len(value) or not (value[cutoff].isascii() and value[cutoff].isalnum()):
+            break
+        cutoff -= 1
+    if cutoff < max(12, limit // 2):
+        space = value.rfind(" ", 0, limit)
+        cutoff = space if space >= max(12, limit // 2) else limit
+    return value[:cutoff].rstrip(" ，,、；;:：") + "..."
+
+
+def source_lines_with_numbers_for_span(source_text: str, span: dict[str, Any] | None) -> list[tuple[int, str]]:
+    if not source_text or not isinstance(span, dict):
+        return []
+    lines = source_text.splitlines()
+    start = max(1, int(span.get("line_start") or 1))
+    end = min(len(lines), int(span.get("line_end") or start))
+    return [
+        (line_number, line.strip())
+        for line_number, line in enumerate(lines[start - 1 : end], start=start)
+        if line.strip()
+    ]
+
+
+def split_candidate_parts(cleaned: str) -> list[str]:
+    primary = [part.strip(" ，,") for part in re.split(r"[。；;]", cleaned) if part.strip(" ，,")]
+    if len(primary) == 1 and visible_text_len(primary[0]) > 45:
+        clause_parts = [part.strip(" ，,") for part in re.split(r"[，,]", primary[0]) if part.strip(" ，,")]
+        if len(clause_parts) >= 3:
+            return clause_parts
+    return primary
+
+
 def candidate_bullets_from_lines(lines: list[str]) -> list[str]:
     candidates: list[str] = []
     for line in lines:
         if line.startswith("#") or line.startswith("!") or line.startswith("图") or line.startswith("|"):
             continue
         cleaned = re.sub(r"^[-*]\s*", "", line).strip()
-        parts = re.split(r"[。；;]", cleaned)
-        for part in parts:
-            value = part.strip(" ，,")
+        for value in split_candidate_parts(cleaned):
             if visible_text_len(value) >= 8:
-                candidates.append(value[:58])
+                candidates.append(smart_truncate(value))
+    return candidates
+
+
+def candidate_bullets_from_span(source_text: str, span: dict[str, Any] | None) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    for line_number, line in source_lines_with_numbers_for_span(source_text, span):
+        if line.startswith("#") or line.startswith("!") or line.startswith("图") or line.startswith("|"):
+            continue
+        cleaned = re.sub(r"^[-*]\s*", "", line).strip()
+        for value in split_candidate_parts(cleaned):
+            if visible_text_len(value) < 8:
+                continue
+            candidates.append(
+                {
+                    "title": smart_truncate(value),
+                    "source_quote": value,
+                    "source_span": {"line_start": line_number, "line_end": line_number},
+                }
+            )
     return candidates
 
 
@@ -483,21 +621,6 @@ def density_keywords_for_node(node: dict[str, Any]) -> list[str]:
     return keywords
 
 
-def supplemental_density_candidates(node: dict[str, Any], source_text: str) -> list[str]:
-    keywords = density_keywords_for_node(node)
-    if not keywords:
-        return []
-    matched_lines: list[str] = []
-    for line in source_text.splitlines():
-        normalized = line.strip()
-        if not normalized or normalized.startswith("#") or normalized.startswith("!") or normalized.startswith("图") or normalized.startswith("|"):
-            continue
-        lowered = normalized.lower()
-        if any(keyword in lowered for keyword in keywords):
-            matched_lines.append(normalized)
-    return candidate_bullets_from_lines(matched_lines)
-
-
 def apply_h3_density(outline: dict[str, Any], source_text: str, min_points: int = 4, max_points: int = 6) -> None:
     for node in iter_nodes(outline.get("nodes", []) or []):
         section_id = str(node.get("section_id") or "")
@@ -505,17 +628,23 @@ def apply_h3_density(outline: dict[str, Any], source_text: str, min_points: int 
             continue
         if child_count_for_density(node) >= min_points:
             continue
-        candidates = candidate_bullets_from_lines(source_lines_for_span(source_text, node.get("source_span")))
-        if len(candidates) < min_points:
-            candidates.extend(supplemental_density_candidates(node, source_text))
+        candidates = candidate_bullets_from_span(source_text, node.get("source_span"))
         existing = {compact_compare_text(child.get("title", "")) for child in node.get("children", []) or [] if isinstance(child, dict)}
         node.setdefault("children", [])
         for candidate in candidates:
-            key = compact_compare_text(candidate)
+            key = compact_compare_text(candidate["title"])
             if not key or any(key in existing_key or existing_key in key for existing_key in existing):
                 continue
             child_id = f"{node.get('id', 'n')}_auto_{len(node['children']) + 1}"
-            node["children"].append({"id": child_id, "title": candidate, "source_quote": candidate, "auto_density": True})
+            node["children"].append(
+                {
+                    "id": child_id,
+                    "title": candidate["title"],
+                    "source_quote": candidate["source_quote"],
+                    "source_span": candidate["source_span"],
+                    "auto_density": True,
+                }
+            )
             existing.add(key)
             if child_count_for_density(node) >= min_points or len(node["children"]) >= max_points:
                 break
@@ -707,6 +836,20 @@ def node_visuals(
         effective, template_id = effective_visual_decision(raw, asset)
         if effective == "omit":
             continue
+        if effective == "crop_preserve":
+            crop_path = crop_image_for_visual(project_path, raw, asset, source_id or "source")
+            if not crop_path:
+                continue
+            resolved.append(
+                {
+                    "kind": "crop_preserve",
+                    "id": source_id,
+                    "path": image_path_for_markdown(project_path, exports_dir, crop_path),
+                    "alt": str(alt),
+                    "source_path": str(raw.get("path") or asset.get("path") or ""),
+                }
+            )
+            continue
         if effective == "redraw":
             template = template_path(template_id)
             if not template:
@@ -804,7 +947,7 @@ def append_node(
             append_bullet(lines, level, "关键词：" + " / ".join(terms))
 
     for visual in node_visuals(node, outline, images_by_id, project_path, exports_dir):
-        if visual.get("kind") == "preserve":
+        if visual.get("kind") in {"preserve", "crop_preserve"}:
             append_render_heading(lines, level + 1, f"![{markdown_escape(visual['alt'])}]({visual['path']})")
         else:
             append_render_heading(lines, level + 1, f"SVG重绘：{markdown_escape(visual['alt'])}")
@@ -922,13 +1065,18 @@ def render_node_html(
         parts.append(render_table_html(node))
 
     visuals = node_visuals(node, outline, images_by_id, project_path, exports_dir)
-    images = [visual for visual in visuals if visual.get("kind") == "preserve"]
+    images = [visual for visual in visuals if visual.get("kind") in {"preserve", "crop_preserve"}]
     if images:
         parts.append('<div class="balanced-images">')
         for image in images:
             src = html.escape(image["path"], quote=True)
             alt = html_text(image["alt"])
-            parts.append(f'<figure class="balanced-preserve-image"><img src="{src}" alt="{alt}"><figcaption>{alt}</figcaption></figure>')
+            kind = html.escape(str(image.get("kind") or "preserve"), quote=True)
+            source_id = html.escape(str(image.get("id") or ""), quote=True)
+            parts.append(
+                f'<figure class="balanced-preserve-image is-{kind}" data-source-id="{source_id}" data-image-kind="{kind}">'
+                f'<img src="{src}" alt="{alt}"><figcaption>{alt}</figcaption></figure>'
+            )
         parts.append("</div>")
     redraws = [visual for visual in visuals if visual.get("kind") == "redraw"]
     if redraws:
@@ -1034,8 +1182,12 @@ def build_balanced_html(
     weight_by_id = {str(item.get("node_id")): int(item.get("weight") or 0) for item in branch_items}
     left_nodes: list[dict[str, Any]] = []
     right_nodes: list[dict[str, Any]] = []
+    bottom_nodes: list[dict[str, Any]] = []
     for node in outline.get("nodes", []) or []:
         if not isinstance(node, dict):
+            continue
+        if node.get("type") in {"keywords", "tips"} and str(node.get("title") or "").startswith("[*]"):
+            bottom_nodes.append(node)
             continue
         side = side_by_id.get(str(node.get("id")), "right")
         if side == "left":
@@ -1077,6 +1229,15 @@ def build_balanced_html(
         branch_html = "".join(render_branch(node, side, index, len(nodes)) for index, node in enumerate(nodes))
         return f'<section class="balanced-side {side}" aria-label="{side} branches">{branch_html}</section>'
 
+    def render_bottom(nodes: list[dict[str, Any]]) -> str:
+        if not nodes:
+            return ""
+        body = "".join(
+            render_node_html(node, 1, outline, images_by_id, project_path, exports_dir, extra_class="balanced-bottom-node")
+            for node in nodes
+        )
+        return f'<section class="balanced-bottom" aria-label="derived grounded strips">{body}</section>'
+
     root_summary = html_text(outline.get("core_question") or outline.get("description") or outline.get("source_title") or "")
     root_terms = collect_root_terms(outline)
     root_items = "".join(f"<li>{html_text(term)}</li>" for term in root_terms)
@@ -1091,7 +1252,7 @@ def build_balanced_html(
         parts.append(f'<p>{root_summary}</p>')
     if root_items:
         parts.append(f"<ul>{root_items}</ul>")
-    parts.extend(["</section>", render_side(right_nodes, "right"), "</section>"])
+    parts.extend(["</section>", render_side(right_nodes, "right"), render_bottom(bottom_nodes), "</section>"])
     return "".join(parts)
 
 

@@ -66,7 +66,7 @@ For `type: "keywords"`, render `terms` as a horizontal capsule strip. For `type:
 7. Ensure the HTML can be opened offline.
 8. Preserve the final hierarchy in `mindmap.md`; the HTML must render that Markdown with Markmap.
 9. Do not use manual x/y coordinates for the main map. Layout belongs to Markmap and browser export.
-10. Do not directly embed assets whose `type` is `screenshot`, `slide`, or `photo`, or whose `redraw_required` is true. Normalize figure decisions to `preserve`, `redraw:<template_id>`, or `omit`; redraw may render only a registered SVG template, and missing templates must downgrade to `omit`.
+10. Do not directly embed raw assets whose `type` is `screenshot`, `slide`, or `photo`, or whose `redraw_required` is true. Normalize figure decisions to `preserve`, `crop_preserve`, `redraw:<template_id>`, or `omit`; `crop_preserve` must write a cropped derivative with provenance, redraw may render only a registered SVG template, and missing templates must downgrade to `omit`.
 
 ## Layout Profile and Density Rules
 
@@ -95,14 +95,17 @@ Use `compact_radial` only for medium-density maps that are too full for a simple
 When `mode = balanced_two_sided`:
 
 - keep the root visually centered;
+- for GPT Image 2 inspired course-note maps, make the root a strong center card rather than a small label;
 - assign first-level branches left/right by subtree weight so both sides are as balanced as practical;
 - place the largest and second-largest first-level branches on opposite sides;
+- preserve explicit side intent when the source or outline marks it, such as Batch on the left and Momentum plus summary on the right;
 - distribute cards around the root so the exported PNG/PDF reads as a horizontal mind map, not as two uneven columns;
 - render visible connector curves from the root to first-level branches and from branch hubs to their child clusters;
 - keep every H3 and lower descendant under the same H2 on that H2 side;
 - keep images with their related node;
 - keep table nodes intact; they may render wider or scroll horizontally, but rows and columns must not be split;
 - do not drop source-backed nodes, tables, formulas, or image decisions to improve aesthetics.
+- render `type: "keywords"` nodes whose title starts with `[*]` as a bottom capsule strip, not as fake numbered branches.
 
 ## Word Conversion Rendering
 
@@ -110,12 +113,21 @@ When the source is a Word/PDF course note:
 
 - Render the H1/H2/H3 skeleton as headings in `mindmap.md`.
 - Render paragraph-level facts as concise bullets, not as long card descriptions.
+- Use numbered lists for sibling facts when a card has three or more details; keep bullets compact and readable.
 - If a node has fewer than two detail bullets, render the detail as plain text without numeric markers.
 - If a single detail bullet repeats the node description, render only the more specific version.
 - H3 heading nodes should render 4 to 6 source-backed details. If source text cannot support that density, merge the H3 into its parent or nearest sibling before rendering.
 - Keep source tables as Markdown tables under the owning node.
-- Keep figure decisions near the node selected by `figure_decisions`; screenshot-like figures render only as registered-template redraws or are omitted with text density fallback.
+- Keep figure decisions near the node selected by `figure_decisions`; screenshot-like figures render only as `crop_preserve` derivatives, registered-template redraws, or are omitted with text density fallback.
 - Carry `coverage_report` and `figure_decisions` from `outline.json` into `mindmap.json`.
+
+## Auto Density Guardrails
+
+- Auto density extraction is section-local. Use only the owning node's `source_span`.
+- Never scan the whole active source to backfill a sparse Momentum card with Batch or introduction content.
+- Every auto density child must carry `source_span` for the exact source line and a `source_quote` that can be found in that line.
+- Truncate display titles only at sentence, clause, or word boundaries. Do not cut an English token in half; keep the full `source_quote` even when the visible title is shortened.
+- If fewer than the desired number of local candidates exist, leave the node sparse and let validation/reporting surface the limitation instead of inventing or cross-filling.
 
 ## Summary Rendering
 
@@ -132,6 +144,8 @@ The center/root node is the most important visual position and must contain:
 - 2 to 3 key terms from the source.
 
 Do not render the center as only a slogan or one-line tagline. Do not fill the center by directly listing child branch titles.
+
+For Lesson 5-like maps, the center card may use `第5节课 模型训练技巧1：批量处理与动量` and should state the learning question: how Batch Size affects efficiency/generalization and how Momentum combines current gradient with historical direction.
 
 ## Math Delimiter Rules
 

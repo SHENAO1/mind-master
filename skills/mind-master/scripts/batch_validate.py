@@ -36,6 +36,7 @@ INLINE_MATH_RE = re.compile(r"(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)", re.S)
 LATEX_LIKE_RE = re.compile(r"(?:_\{|[\^]\{|\\(?:frac|sum|nabla|theta|lambda|eta|sigma|alpha|beta|gamma|mu|Sigma)\b)")
 LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
 SCREENSHOT_EMBED_BLOCK_TYPES = {"screenshot", "slide", "photo"}
+ALLOWED_FIGURE_DECISIONS = {"preserve", "crop_preserve", "redraw", "omit"}
 SVG_BLOCK_RE = re.compile(r"<svg\b[^>]*>(.*?)</svg>", re.I | re.S)
 SVG_PATH_D_RE = re.compile(r"<path\b[^>]*\bd=[\"']([^\"']+)[\"']", re.I)
 SVG_COMMAND_RE = re.compile(r"[A-Za-z]")
@@ -265,6 +266,24 @@ def check_section_numbering(source_text: str, root: dict[str, Any]) -> dict[str,
     }
 
 
+def check_no_extra_section_numbers(source_text: str, root: dict[str, Any]) -> dict[str, Any]:
+    allowed = {
+        section_id
+        for heading in source_headings(source_text)
+        for section_id in [section_id_from_heading(heading)]
+        if section_id
+    }
+    extras: list[dict[str, Any]] = []
+    for node, _path in flatten_nodes_with_path(root):
+        title = str(node.get("title") or "")
+        explicit = str(node.get("section_id") or "")
+        candidates = [candidate for candidate in [explicit, section_id_from_heading(title)] if candidate and "." in candidate]
+        for candidate in candidates:
+            if candidate not in allowed:
+                extras.append({"id": node.get("id"), "title": title, "section_id": candidate})
+    return {"passed": not extras, "allowed": sorted(allowed), "extra": extras}
+
+
 def coverage_entries(outline: dict[str, Any], mindmap: dict[str, Any]) -> list[str]:
     entries: list[str] = []
     coverage = mindmap.get("coverage_report") or outline.get("coverage_report") or {}
@@ -369,6 +388,40 @@ def check_image_decisions(source_text: str, outline: dict[str, Any], mindmap: di
         "decision_missing": decision_missing,
         "coverage_missing": coverage_missing,
         "missing": missing,
+    }
+
+
+def check_figure_decision_values(outline: dict[str, Any], mindmap: dict[str, Any], project_path: Path) -> dict[str, Any]:
+    invalid: list[dict[str, Any]] = []
+    crop_missing: list[dict[str, Any]] = []
+    decisions = [item for item in mindmap.get("figure_decisions", []) or [] if isinstance(item, dict)]
+    if not decisions:
+        decisions = [item for item in outline.get("figure_decisions", []) or [] if isinstance(item, dict)]
+    seen: set[tuple[str, str]] = set()
+    for item in decisions:
+        source_id = str(item.get("source_id") or item.get("id") or "")
+        decision = str(item.get("decision") or item.get("effective_decision") or "")
+        key = (source_id, decision)
+        if key in seen:
+            continue
+        seen.add(key)
+        if decision not in ALLOWED_FIGURE_DECISIONS:
+            invalid.append({"source_id": source_id, "decision": decision})
+        if decision == "crop_preserve":
+            crop_path = str(item.get("crop_path") or "")
+            if not crop_path:
+                crop_missing.append({"source_id": source_id, "reason": "crop_path missing"})
+            else:
+                absolute = Path(crop_path)
+                if not absolute.is_absolute():
+                    absolute = project_path / absolute
+                if not absolute.exists():
+                    crop_missing.append({"source_id": source_id, "crop_path": crop_path, "reason": "crop file missing"})
+    return {
+        "passed": not invalid and not crop_missing,
+        "allowed": sorted(ALLOWED_FIGURE_DECISIONS),
+        "invalid": invalid,
+        "crop_missing": crop_missing,
     }
 
 
@@ -640,7 +693,15 @@ def check_layout_readability(mindmap: dict[str, Any], paths: dict[str, Path]) ->
 
 
 def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
-    required = ["heading_coverage", "section_numbering", "table_checks", "formula_coverage", "image_decisions"]
+    required = [
+        "heading_coverage",
+        "section_numbering",
+        "no_extra_section_numbers",
+        "table_checks",
+        "formula_coverage",
+        "image_decisions",
+        "figure_decision_values",
+    ]
     failures = [name for name in required if not checks.get(name, {}).get("passed", False)]
     return {
         "passed": not failures,
@@ -869,10 +930,12 @@ def main(argv: list[str] | None = None) -> int:
 
         checks["heading_coverage"] = check_heading_coverage(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
         checks["section_numbering"] = check_section_numbering(source_text, root) if source_text else {"passed": True, "skipped": True}
+        checks["no_extra_section_numbers"] = check_no_extra_section_numbers(source_text, root) if source_text else {"passed": True, "skipped": True}
         checks["table_checks"] = check_tables(flat, source_text)
         checks["formula_coverage"] = check_formula_coverage(root, source_text)
         checks["math_delimiter_checks"] = check_math_delimiters(root, markdown)
         checks["image_decisions"] = check_image_decisions(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
+        checks["figure_decision_values"] = check_figure_decision_values(outline, mindmap, ctx["project"])
         checks["rendered_images"] = check_rendered_images(markdown, ctx["exports"])
         checks["source_image_policy"] = check_source_image_policy(markdown, html_text, outline, mindmap, images_index)
         checks["placeholder_curve_detection"] = check_placeholder_curve_detection(html_text)

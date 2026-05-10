@@ -42,6 +42,7 @@ def build_fixture_project(base_dir: Path) -> Path:
     write_png(images_dir / "data_curve.png", "Batch Size vs Time", (640, 360))
     write_png(images_dir / "slide_screen.png", "Slide Screenshot", (520, 340))
     write_png(images_dir / "sharp_flat.png", "Sharp vs Flat", (520, 340))
+    write_png(images_dir / "momentum_ball.png", "Momentum physical analogy", (720, 520))
 
     source = """# 第5节课 测试
 
@@ -68,7 +69,7 @@ Shuffle 会在每个 Epoch 开始前打乱数据顺序。
 
 ![concept](assets/images/sharp_flat.png)
 
-图5-3 sharp minima与flat minima对比图。
+图5-3 Sharp Minima vs Flat Minima registered template。
 
 ### 5.1.2 Batch的作用
 
@@ -87,6 +88,10 @@ Momentum 的目的是帮助梯度下降克服鞍点或局部最优解。
 物理类比是小球滚下斜坡时会借助惯性越过洼地。
 历史方向会和当前梯度共同影响更新方向。
 这种方向积累能帮助模型继续向较优区域移动。
+
+![momentum](assets/images/momentum_ball.png)
+
+图5-4 Momentum物理类比图
 
 ## 5.3本章小结
 
@@ -131,6 +136,13 @@ Momentum 通过引入历史方向，为训练过程增添惯性。
                     "path": "assets/images/sharp_flat.png",
                     "alt": "Image extracted from sharp flat concept",
                     "source_anchor": "p3",
+                    "type": "screenshot",
+                },
+                {
+                    "id": "momentum_fig",
+                    "path": "assets/images/momentum_ball.png",
+                    "alt": "Image extracted from Momentum physical analogy",
+                    "source_anchor": "p4",
                     "type": "screenshot",
                 },
             ]
@@ -220,6 +232,7 @@ Momentum 通过引入历史方向，为训练过程增添惯性。
                 {"source_id": "data_fig", "source_path": "assets/images/data_curve.png", "node_path": "root > Batch > Batch定义", "action": "image"},
                 {"source_id": "slide_fig", "source_path": "assets/images/slide_screen.png", "node_path": "root > Batch > Batch定义", "action": "image"},
                 {"source_id": "concept_fig", "source_path": "assets/images/sharp_flat.png", "node_path": "root > Batch > Batch作用", "action": "image"},
+                {"source_id": "momentum_fig", "source_path": "assets/images/momentum_ball.png", "node_path": "root > Momentum > Momentum概念", "action": "image"},
             ],
             "tables": [],
             "formulas": [],
@@ -229,6 +242,7 @@ Momentum 通过引入历史方向，为训练过程增添惯性。
             {"source_id": "data_fig", "source_path": "assets/images/data_curve.png", "decision": "image", "node_id": "n_batch_def", "node_path": "root > Batch > Batch定义", "alt": "Batch Size 时间数据图", "reason": "真实数据图"},
             {"source_id": "slide_fig", "source_path": "assets/images/slide_screen.png", "decision": "image", "node_id": "n_batch_def", "node_path": "root > Batch > Batch定义", "alt": "课程截图", "reason": "测试截图默认 omit"},
             {"source_id": "concept_fig", "source_path": "assets/images/sharp_flat.png", "decision": "image", "node_id": "n_batch_effect", "node_path": "root > Batch > Batch作用", "alt": "Sharp vs Flat Minima", "reason": "测试注册模板 redraw"},
+            {"source_id": "momentum_fig", "source_path": "assets/images/momentum_ball.png", "decision": "image", "node_id": "n_momentum_concept", "node_path": "root > Momentum > Momentum概念", "alt": "Momentum 物理惯性类比", "reason": "测试 crop_preserve"},
         ],
     }
     write_json(map_intermediate / "outline.json", outline)
@@ -292,6 +306,8 @@ class PipelineRegressionTests(unittest.TestCase):
             normalized = src.replace("\\", "/")
             if "assets/images/" not in normalized:
                 continue
+            if "assets/images/crops/" in normalized:
+                continue
             asset_path = "assets/images/" + normalized.rsplit("assets/images/", 1)[1]
             asset = by_path.get(asset_path)
             self.assertIsNotNone(asset, asset_path)
@@ -305,6 +321,37 @@ class PipelineRegressionTests(unittest.TestCase):
         self.assertEqual(decisions["data_fig"], "preserve")
         self.assertEqual(decisions["slide_fig"], "omit")
         self.assertEqual(decisions["concept_fig"], "redraw")
+        self.assertEqual(decisions["momentum_fig"], "crop_preserve")
+
+    def test_crop_preserve_creates_provenance_file(self):
+        crops = [
+            item for item in self.mindmap["figure_decisions"]
+            if item.get("decision") == "crop_preserve"
+        ]
+        self.assertTrue(crops)
+        for item in crops:
+            crop_path = self.project / item["crop_path"]
+            self.assertTrue(crop_path.exists(), crop_path)
+            self.assertEqual(item.get("crop_source_id"), item["source_id"])
+
+    def test_no_extra_section_numbers(self):
+        self.assertTrue(self.validation["checks"]["no_extra_section_numbers"]["passed"])
+
+    def test_auto_density_stays_inside_source_span(self):
+        source_lines = (self.project / "intermediate" / "sections" / "lesson_05.md").read_text(encoding="utf-8").splitlines()
+        for node in self.mindmap["root"]["children"]:
+            if node.get("id") != "n_momentum":
+                continue
+            for child in node.get("children", []):
+                for leaf in child.get("children", []):
+                    if not leaf.get("auto_density"):
+                        continue
+                    span = leaf.get("source_span") or {}
+                    self.assertGreaterEqual(span.get("line_start", 0), child["source_span"]["line_start"])
+                    self.assertLessEqual(span.get("line_end", 10**9), child["source_span"]["line_end"])
+                    quote = leaf.get("source_quote", "")
+                    joined = "\n".join(source_lines[span["line_start"] - 1:span["line_end"]])
+                    self.assertIn(quote, joined)
 
 
 if __name__ == "__main__":

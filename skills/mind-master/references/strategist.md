@@ -45,7 +45,7 @@ Write valid JSON:
 1. Preserve the author's argument structure before optimizing layout.
 2. Keep node labels short according to `shared-standards.md`.
 3. Put formulas on the most relevant node.
-4. Treat source images with the three-way policy: `preserve` for real data charts, `redraw:<template_id>` only when a registered SVG template exists, and `omit` by default.
+4. Treat source images with the four-way learning-map policy: `preserve` for key evidence charts, `crop_preserve` for source figures whose focused region is useful, `redraw:<template_id>` only when a registered SVG template exists, and `omit` by default.
 5. Use OCR text only to judge image relevance.
 6. Register external referenced visuals as `screenshot_intents`; do not fetch them in this step.
 7. Keep IDs stable and simple: `n1`, `n1_1`, `n1_2`.
@@ -60,6 +60,7 @@ For Word/PDF course notes, the primary job is faithful conversion into a readabl
 - Preserve the active H1/H2/H3 teaching skeleton unless the user explicitly requests a different synthesis.
 - Heading nodes must preserve their original section number visibly in `title`, for example `5.1.1 Batch 的定义`. Do not replace numbered source headings with only conceptual labels such as `效率机制`.
 - Each H2/H3 heading node must carry `section_id`. Nodes that do not correspond to an original source heading but are added by the Strategist must start their title with `[*]`.
+- Source-numbered headings are a closed set. If the active source contains only `5.1`, `5.1.1` through `5.1.4`, `5.2`, `5.2.1` through `5.2.2`, and `5.3`, the outline must not create `5.2.3`, `5.4`, `5.5`, or any other absent source-style number.
 - Convert paragraphs into concise leaf bullets under the nearest heading node instead of compressing several paragraphs into one oversized card description.
 - Preserve source tables, display formulas, and instructional figures as first-class outline items.
 - `本节小结` / `本章小结` can summarize the section, but it must not replace earlier body content.
@@ -129,6 +130,18 @@ Rules:
 - Every source image in the active section must appear in `coverage_report.figures` or `coverage_report.omitted`.
 - Missing coverage is a blocking validation failure.
 
+## GPT Image 2 Inspired but Source-Faithful Profile
+
+This is a visual organization profile, not a content rewriting mode.
+
+- Use the source H1 as a strong center card. For Lesson 5, the preferred root title is `第5节课 模型训练技巧1：批量处理与动量`.
+- Keep Batch on the left side; keep Momentum and the source summary on the right side when the source has this two-topic structure.
+- Under Batch, keep the original sequence: definition, efficiency, generalization, comparison table. Details may render as numbered lists, but the node titles keep `5.1.1` through `5.1.4`.
+- Under Momentum, use a formula node/card and a visual node/card to express `当前梯度 + 历史方向`.
+- Keywords render as one bottom capsule strip with title `[*] 关键词`; they are not a numbered source chapter.
+- A tuning or learning-hint node is allowed only when every item is marked `derived_from_summary` or `grounded_hint` and has `source_quote` or `source_span`. Its title must start with `[*]`.
+- Do not sacrifice source truth for symmetry, icons, or a denser canvas.
+
 ## Specificity Rules
 
 Concrete source detail should survive abstraction.
@@ -144,6 +157,8 @@ Concrete source detail should survive abstraction.
 Every evidence-bearing node must be traceable.
 
 - Leaf nodes must include `source_quote`.
+- H2/H3 core nodes must include `source_quote` or `source_span`; prefer both when line spans are known.
+- Auto-added density leaves must be drawn only from the owning node's `source_span`. If a candidate sentence cannot be bound to that span, do not add it.
 - Table rows should include `source_quote` when the row is derived from prose or a source table row.
 - Do not use general ML knowledge to complete missing explanations. If the source does not mention GPU memory, bandwidth, framework defaults, or other background details, omit them.
 - If evidence is ambiguous, use `notes` to mark uncertainty rather than inventing a claim.
@@ -170,7 +185,7 @@ After drafting but before the hierarchy GATE:
 - Keywords must come from the active source; do not add domain terms just because they are common.
 - Keywords nodes still need a traceable `source_quote`; use a real source sentence containing one or more of the listed terms, not a synthetic joined list.
 - Create a `type: "tips"` node only when the source explicitly contains practice advice, tuning guidance, cautions, or tips.
-- If the source has no practice/tuning/tips paragraph, do not generate a tips node. In particular, do not invent a `调参启示` node for a lesson that lacks such source content.
+- If the source has no practice/tuning/tips paragraph, do not generate a tips node. If the user asks for derived tuning implications, use title `[*] 调参启示`, set `type: "tips"`, and mark each item with `derived_from_summary` or `grounded_hint`; never number it as a source section.
 
 ## Grouping and Opposition Map
 

@@ -26,6 +26,22 @@
 
 ---
 
+## 2026-05-10 · GPT Image 2 inspired source-faithful profile 与四分图像策略
+
+**背景**: 第 5 节复盘确认 GPT Image 2 参考导图在中心锚点、左右分支、编号列表和视觉记忆点上更清晰，但参考图引入了原文不存在的 `5.2.3`、`5.4`、`5.5` 等章节编号。此前三分法也无法表达“原图有价值但应裁剪重点区域后嵌入”的学习导图需求。
+
+**选项**:
+- A: 继续 `preserve` / `redraw` / `omit` 三分法，并只用 SVG 重绘处理截图类教学图。
+- B: 扩展为 `preserve` / `crop_preserve` / `redraw` / `omit` 四分法，同时新增 source-faithful 视觉 profile 和伪章节编号校验。
+
+**决策**: 选择 B。
+
+**理由**: `crop_preserve` 能保留关键原文证据和视觉记忆点，同时避免整页截图占据过多画布；章节编号白名单和 source_span 约束可以防止为了 GPT Image 2 式视觉组织而牺牲原文真实性。
+
+**影响**: 更新 `SKILL.md`、Strategist/Executor/Image/Format references、`extract_assets.py`、`render_mindmap.py`、`batch_validate.py`、`templates/markmap.html` 与回归测试。`lesson_05` 使用 Batch 左侧、Momentum/小结右侧、关键词底部胶囊条，图像决策为 1 preserve、3 crop_preserve、1 redraw、2 omit。
+
+**状态**: 生效
+
 ## 2026-05-10 · 图像策略改为 preserve/redraw/omit 三分法
 
 **背景**: 第二轮把 DOCX 截图禁止直嵌后,5 张截图被替换成高度相似的通用曲线占位图,没有真实信息价值。对比纯文字导图后确认:思维导图应以结构化文字为主,图像只作为少量例外。
@@ -40,7 +56,7 @@
 
 **影响**: 更新 `image-policy.md`、`SKILL.md`、Strategist/Executor references、`extract_assets.py`、`render_mindmap.py`、`batch_validate.py`;新增 `assets/svg_templates/` 和 `tests/` 回归。验证新增 `placeholder_curve_detection`、keywords、summary、H3 density 等阻塞检查。
 
-**状态**: 生效
+**状态**: 已推翻(见 2026-05-10 · GPT Image 2 inspired source-faithful profile 与四分图像策略)
 
 ## 2026-05-10 · DOCX 截图默认作为 SVG 重绘语义引用
 

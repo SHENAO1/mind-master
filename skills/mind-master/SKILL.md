@@ -45,7 +45,9 @@ DOCX/PDF
 7. Keep equations editable. Equations must remain LaTeX text in HTML and render through KaTeX. Do not rasterize formulas into images.
 8. OCR informs image relevance only. Do not rewrite node text from OCR.
 9. Output filtering hard constraints must land in three layers: reference docs, executor/render behavior, and validation checks. If any layer is missing, the constraint is not implemented.
-10. Mind maps are text-first. Source figures normalize to `preserve`, `redraw:<template_id>`, or `omit`; `omit` is the default. Screenshots/slides/photos must not be directly embedded through `<img>`, and redraw is allowed only through a registered SVG template.
+10. Mind maps are text-first. Source figures normalize to `preserve`, `crop_preserve`, `redraw:<template_id>`, or `omit`; `omit` is the default. Screenshots/slides/photos must not be directly embedded through `<img>` as raw originals; use `crop_preserve` only for source-faithful learning evidence, and use redraw only through a registered SVG template.
+11. GPT Image 2 inspired layouts are allowed only as a visual organization profile. They must keep source headings, source numbering, `source_quote` / `source_span`, tables, formulas, and figure decisions intact.
+12. Never invent section numbers for derived nodes. Keywords, learning hints, or tuning implications must be titled with `[*]` and marked with `derived_from_summary` or `grounded_hint`; they must not become fake sections such as `5.4` or `5.5`.
 
 ## Required References
 
@@ -59,7 +61,7 @@ Read only what the current stage needs, except Step 6 where batch preread is req
 - `references/executor-org.md`: org or hierarchy style
 - `references/mindmap-formats.md`: JSON, Markdown, HTML, SVG, PNG, PDF contracts
 - `references/math-rendering.md`: OMML, LaTeX, MathML, KaTeX rules
-- `references/image-policy.md`: image selection, screenshots, crop, alt, copyright, readability
+- `references/image-policy.md`: image selection, screenshots, crop-preserve, alt, copyright, readability
 
 ## Project Path Contract
 
@@ -382,10 +384,11 @@ Role: image curator and screenshot operator.
 Before selecting images:
 
 1. Read `assets/images/index.json`.
-2. Normalize every figure to one of `preserve`, `redraw:<template_id>`, or `omit`; default to `omit`.
+2. Normalize every figure to one of `preserve`, `crop_preserve`, `redraw:<template_id>`, or `omit`; default to `omit`.
 3. Use `preserve` only for source-backed data charts or irreducible visual evidence classified as `type: "data_chart"`, `is_data_chart: true`, and `redraw_required: false`.
-4. Use `redraw:<template_id>` only when `assets/svg_templates/<template_id>.svg` exists. Missing templates must downgrade to `omit`.
-5. Do not set `decision: "image"` or `decision: "crop"` for screenshots, slides, or photos unless the asset has been explicitly reclassified as a preserve-worthy data chart.
+4. Use `crop_preserve` when the original figure is useful but too large or slide-like; crop the source image to the evidence region and keep provenance in `crop_source_id`, `crop_box`, and `crop_path`.
+5. Use `redraw:<template_id>` only when `assets/svg_templates/<template_id>.svg` exists. Missing templates must downgrade to `omit`.
+6. Do not set legacy `decision: "image"` for screenshots, slides, or photos unless the renderer can normalize it to `crop_preserve`, `redraw:<template_id>`, or `omit`.
 
 Before external URL screenshots:
 
@@ -515,6 +518,8 @@ Checks:
 - H2/H3 coverage is complete through `coverage_report`
 - source H2/H3 section numbers are visible in rendered node titles and `section_id` metadata
 - every source table, display formula, and active-section image has an explicit disposition
+- no rendered node introduces a source-style section number absent from the active source
+- figure decisions use only `preserve`, `crop_preserve`, `redraw`, or `omit`
 - keywords nodes render as capsule terms when source terms support them
 - summary details are complete source-backed sentences, not noun phrases
 - H3 nodes carry at least four details or are merged before render
