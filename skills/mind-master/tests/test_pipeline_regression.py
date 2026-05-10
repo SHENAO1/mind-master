@@ -392,10 +392,33 @@ class PipelineRegressionTests(unittest.TestCase):
         self.assertTrue(self.validation["checks"]["layout_aesthetics"]["passed"])
         self.assertTrue(self.validation["checks"]["bottom_learning_band"]["passed"])
         self.assertTrue(self.validation["checks"]["connector_noise"]["passed"])
+        self.assertTrue(self.validation["checks"]["connector_target_clarity"]["passed"])
+        self.assertTrue(self.validation["checks"]["connector_endpoint_visible"]["passed"])
+        self.assertTrue(self.validation["checks"]["connector_crossing_limit"]["passed"])
+        self.assertTrue(self.validation["checks"]["connector_outside_card_ratio"]["passed"])
+        self.assertTrue(self.validation["checks"]["connector_parent_child_mapping"]["passed"])
         self.assertTrue(self.validation["checks"]["poster_packing"]["passed"])
         self.assertTrue(self.validation["checks"]["batch_height_compactness"]["passed"])
         self.assertTrue(self.validation["checks"]["evidence_compactness"]["passed"])
+        self.assertTrue(self.validation["checks"]["evidence_card_containment"]["passed"])
+        self.assertTrue(self.validation["checks"]["evidence_chip_overflow"]["passed"])
+        self.assertTrue(self.validation["checks"]["overlay_inside_media_bounds"]["passed"])
+        self.assertTrue(self.validation["checks"]["node_overflow_detection"]["passed"])
+        self.assertTrue(self.validation["checks"]["evidence_caption_containment"]["passed"])
+        self.assertTrue(self.validation["checks"]["evidence_overlay_metadata"]["passed"])
         self.assertTrue(self.validation["checks"]["learning_band_compactness"]["passed"])
+        self.assertIn('data-node-id="root"', self.html)
+        self.assertIn('data-connector-role="root"', self.html)
+        self.assertIn('data-parent-id="root"', self.html)
+        self.assertIn('data-connector-role="h2-hub"', self.html)
+        self.assertIn('data-connector-role="h3-card"', self.html)
+        overlay_ids = {
+            item["source_id"]
+            for item in self.mindmap["figure_decisions"]
+            if item.get("overlay_highlights")
+        }
+        if self.validation["checks"]["evidence_overlay_metadata"].get("checked"):
+            self.assertGreaterEqual(overlay_ids, {"fig_p38_004", "fig_p46_006", "fig_p63_008"})
         for item in self.mindmap["figure_decisions"]:
             if item.get("decision") == "omit":
                 continue

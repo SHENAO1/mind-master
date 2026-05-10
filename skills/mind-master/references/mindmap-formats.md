@@ -107,6 +107,9 @@ Rules:
 - Layout changes must not remove or merge H2/H3 sections, tables, formulas, or figure decisions.
 - `visual_profile: "compact_learning_poster"` means the same source-faithful tree is rendered as a finished learning poster: stronger center card, closer branches, evidence cards, a bottom learning band, and low-noise connectors.
 - Compact learning posters must measure the final `.balanced-layout` content bbox and report poster-packing metrics: `content_bbox_ratio`, `top_blank_ratio`, `center_void_ratio`, `edge_blank_ratio`, and `poster_aspect_ratio`.
+- Compact learning posters must expose connector semantics in HTML: root, H2 hubs, and H3 cards carry `data-node-id`, `data-parent-id`, `data-connector-role`, and `data-side`; connector paths carry matching source/target IDs.
+- Connector validation must prove target clarity, visible endpoints, low crossing count, high outside-card ratio, and correct parent-child mapping.
+- Overflow validation must prove evidence card content, callout chips, overlay chips, captions, and node contents stay inside their visual containers.
 - Under `balanced_two_sided`, all H3 and lower content under the same H2 stays on the same side as that H2.
 - H2 headings remain first-level branches and H3 headings remain second-level nodes. `balanced_two_sided` may move an entire H2 branch left/right, but must not promote H3 nodes to first-level cards.
 
@@ -383,6 +386,17 @@ PNG default scale: `2`.
 - `poster_packing`: `content_bbox_ratio`, `top_blank_ratio`, `center_void_ratio`, `edge_blank_ratio`, and `poster_aspect_ratio`
 - `batch_height_compactness`: `left_branch_height_ratio`, `table_compactness`, and `evidence_grid_compactness`
 - `evidence_compactness`: `evidence_title_visible`, `evidence_callout_visible`, `evidence_media_area_ratio`, and `evidence_card_not_too_tall`
+- `evidence_overlay_metadata`: optional overlay/highlight labels must carry source-backed metadata and be visibly rendered
+- `connector_target_clarity`: connector endpoints attach to explicit parent/child card edge ports
+- `connector_endpoint_visible`: every semantic connector renders a visible target marker
+- `connector_crossing_limit`: connector-to-connector crossings stay below the poster threshold
+- `connector_outside_card_ratio`: connector path samples stay outside non-source/non-target card bodies
+- `connector_parent_child_mapping`: connector source/target metadata matches rendered `data-parent-id`
+- `evidence_card_containment`: every evidence-card internal element remains inside the evidence card
+- `evidence_chip_overflow`: callout chips wrap or clamp instead of exceeding card bounds
+- `overlay_inside_media_bounds`: overlay chips remain inside `.balanced-evidence-media`
+- `node_overflow_detection`: visible node children do not overflow their node container
+- `evidence_caption_containment`: figure captions and source labels remain inside evidence cards
 - `learning_band_compactness`: `learning_band_column_count`, `learning_band_keyword_limit`, and `learning_band_height_ratio`
 - `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
 - `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases

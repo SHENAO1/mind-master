@@ -18,6 +18,18 @@
 > 本文件底部留一行链接指向归档文件。
 ---
 
+## 2026-05-10 · Codex
+**完成 / Done**: 修复 `lesson_05` compact learning poster 的连接线语义与图证卡溢出问题。root/H2/H3 节点新增 `data-node-id`、`data-parent-id`、`data-connector-role`、`data-side`；连接线改为父子边缘端口折线、endpoint dots，并通过 gutter/detour 绕开兄弟卡。图证卡统一 containment，`fig_p38_004` 改为图片优先、callout chips 卡内下方两列，overlay chips 限制在 media 内。新增 10 个 connector/containment/overflow 浏览器校验并更新 Skill/reference/tests。
+**进行中 / In progress**: 已完整重跑 `extract_assets.py`、`render_mindmap.py`、`export_mindmap.py`、`batch_validate.py` 和 unittest；HTML/SVG/PNG/PDF 均正常导出。最终 SVG 视口 `2240x1200`、PNG `4480x2400`、PDF 为单页 PNG PDF。连接线 `count=11`、`maxStrokeWidth=2.5`、`crossingCount=0`、`outsideCardRatio=1.0`；`fig_p38_004` 卡片 325x211、media 311x132、chip/overlay/caption 溢出均为 0。
+**下一步建议 / Next**: 将 connector metadata/port routing 与 evidence containment 规则推广到第 6-8 节，尤其观察多图、多公式章节下 gutter detour 是否需要更通用的避障策略。
+**注意 / Watch out**: `fig_p38_004` 增高导致 Batch 左侧高度比上一版略升，但仍通过 `batch_height_compactness`；后续压缩只能调布局和 wrapping，不能删除 source label、evidence_title、callout 或 overlay 来过关。
+
+
+## 2026-05-10 · Codex
+**完成 / Done**: 在既有 compact learning poster 基础上继续收紧 `lesson_05`：画布从 `2360x1331` 收到 `2240x1200`，Batch 左侧实际高度约 `1168px -> 944px`，5.1.4 表格改为可与 5.1.3 并排的 compact comparison matrix；`fig_p38_004`、`fig_p46_006`、`fig_p63_008` 新增 source-backed overlay highlights，并在 references/SKILL 中记录 overlay metadata 规则。
+**进行中 / In progress**: 已重新运行 `extract_assets.py`、`render_mindmap.py`、`export_mindmap.py`、`batch_validate.py` 和 unittest。最新 SVG/PNG/PDF 正常导出；`heading_coverage`、`section_numbering`、`source_quote`、`table_checks`、`formula_coverage`、`image_decisions`、`forbidden_section_numbers`、`derived_node_labeling`、`image_readability`、`crop_metadata`、`image_callout_grounding`、`text_compression`、`poster_packing`、`batch_height_compactness`、`evidence_compactness`、`evidence_overlay_metadata`、`learning_band_compactness` 全部通过。
+**下一步建议 / Next**: 把 overlay metadata、Batch compact matrix 和 2240x1200 poster packing 规则推广到第 6-8 节，优先消除 lesson-specific 硬编码。
+**注意 / Watch out**: 当前 `projects/ml_theory2_test/` 产物仍被 git 忽略；新增 overlay 只解释原图已有信息，必须保留 `source_quote`，不得作为无来源装饰标注。
 
 ## 2026-05-10 · Codex
 **完成 / Done**: 将 `lesson_05` 从可读学习导图继续压缩为 16:9 成品级学习海报：导出裁切到 `.balanced-layout`，SVG 从 `2100x1627` 改为 `2360x1331`；H2 主牌增强，图证卡改为媒体 + 结论栏，`fig_p32_003` 与 `fig_p38_004` 并排，`fig_p46_006` 裁剪收紧，表 5-1 改为 compact comparison matrix，`5.3 本章小结` 做成橙色总结区，底部学习增强带固定三栏且最多渲染 10 个关键词。

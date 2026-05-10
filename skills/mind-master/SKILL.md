@@ -53,6 +53,8 @@ DOCX/PDF
 15. Course-note nodes should carry `icon` metadata when the node type is recognizable, using simple line icons such as `database`, `file-text`, `gauge`, `line-chart`, `scale`, `running`, `lightbulb`, `settings`, `list-checks`, `key`, and `wrench`.
 16. Compact learning poster layouts must render retained/redrawn figures as evidence cards with `evidence_title`, source figure label, image/redraw, and source-backed callouts. Keywords, Momentum advantages, and tuning hints must merge into one bottom learning band, not scatter as fake numbered sections.
 17. Finished learning posters must be packed against the measured `.balanced-layout` content bbox: prefer a 16:9 canvas, accept 4:3 only when content requires it, keep top/edge/center voids small, and validate left-branch height, evidence-card compactness, compact comparison tables, and the three-column learning band.
+18. Finished poster mode forbids visible overflow outside card boundaries. Evidence card images/redraws, captions, source labels, callout chips, and overlay chips must remain inside `.balanced-evidence-card`; fix overflow through layout/CSS/validation, not by hiding source-backed content.
+19. Balanced poster connectors are semantic parent-child links, not decorative background curves. Root/H2/H3 cards must carry connector metadata (`data-node-id`, `data-parent-id`, `data-connector-role`, `data-side`), and connectors must route from parent edge ports to child edge ports with visible endpoint markers.
 
 ## Required References
 
@@ -537,6 +539,17 @@ Checks:
 - `poster_packing` measures `content_bbox_ratio`, `top_blank_ratio`, `center_void_ratio`, `edge_blank_ratio`, and `poster_aspect_ratio`
 - `batch_height_compactness` measures `left_branch_height_ratio`, `table_compactness`, and `evidence_grid_compactness`
 - `evidence_compactness` checks visible evidence titles/callouts, media-area ratio, and card height
+- `evidence_overlay_metadata` checks that optional figure overlays have source-backed metadata and render visibly
+- `connector_target_clarity` checks that connectors attach to explicit source/target card edge ports
+- `connector_endpoint_visible` checks that every connector has a visible terminal marker
+- `connector_crossing_limit` checks connector-to-connector crossings remain minimal
+- `connector_outside_card_ratio` checks connector samples stay outside non-target card bodies
+- `connector_parent_child_mapping` checks rendered connector source/target IDs match node parent metadata
+- `evidence_card_containment` checks all evidence-card internal elements stay inside the card
+- `evidence_chip_overflow` checks callout chips wrap/clamp instead of spilling outside the card
+- `overlay_inside_media_bounds` checks overlay chips stay within the evidence media area
+- `node_overflow_detection` checks rendered nodes do not visibly overflow their own boxes
+- `evidence_caption_containment` checks captions and source labels remain inside the evidence card
 - `learning_band_compactness` requires exactly three columns, at most 10 rendered keywords, and a 12-15% max band height
 
 Regression command before Step 8:

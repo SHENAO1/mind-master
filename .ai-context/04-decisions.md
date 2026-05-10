@@ -26,6 +26,38 @@
 
 ---
 
+## 2026-05-10 · Connector clarity 与 evidence card containment 门禁
+
+**背景**: `compact_learning_poster` 已能通过 packing 与 overlay metadata，但最终 PNG 中连接线仍像背景曲线，H2 到 H3 的父子端点不够明确；`fig_p38_004` 等图证卡在紧凑布局下存在 callout/overlay chip 溢出风险。
+
+**选项**:
+- A: 继续用低透明曲线和人工目视检查，依靠 CSS 局部微调减少溢出。
+- B: 为 root/H2/H3 节点写出 connector metadata，按真实 DOM 边缘端口动态路由折线并添加 endpoint dots；同时把 evidence card containment 写入 CSS 与浏览器验证器。
+
+**决策**: 选择 B。
+
+**理由**: 成品级学习海报必须让读者能追踪父子关系，也必须保证图证卡中的图片、source label、callout 与 overlay 都留在卡片内部。把端口连接、父子映射、穿卡比例和卡片 containment 纳入验证，能防止后续为了视觉紧凑牺牲语义或隐藏内容。
+
+**影响**: 更新 `render_mindmap.py`、`templates/markmap.html`、`batch_validate.py`、Skill/reference 和回归测试。新增 `connector_target_clarity`、`connector_endpoint_visible`、`connector_crossing_limit`、`connector_outside_card_ratio`、`connector_parent_child_mapping`、`evidence_card_containment`、`evidence_chip_overflow`、`overlay_inside_media_bounds`、`node_overflow_detection`、`evidence_caption_containment` 校验。`lesson_05` 最新连接线 `outsideCardRatio=1.0`、`crossingCount=0`；`fig_p38_004` 卡片 325x211，media 311x132，无 chip/overlay/caption 溢出。
+
+**状态**: 生效
+
+## 2026-05-10 · Evidence overlay metadata 与更紧凑 poster packing
+
+**背景**: `compact_learning_poster` 已经通过基础版面门禁，但图证卡仍主要依赖旁侧 callout，重点图中的关键结论缺少可验证的教学标注；Batch 左侧高度也仍由 5.1.3 图证卡与 5.1.4 表格纵向堆叠主导。
+
+**选项**:
+- A: 只继续调 CSS，靠人工观察判断图证卡是否更像教学 callout。
+- B: 为重点图加入 `overlay_highlights[]` 元数据和浏览器可见性校验，同时把 Batch 表格压成可并排的 compact comparison matrix，并把 poster 画布收紧到更小固定成品比例。
+
+**决策**: 选择 B。
+
+**理由**: overlay/highlight 若没有 source_quote 支撑，会把视觉标注变成装饰甚至误导；把 overlay 元数据、可见渲染和 Batch compactness 一起纳入校验，可以在不删内容、不造伪章节的前提下继续提升成品海报密度。
+
+**影响**: 更新 `render_mindmap.py`、`templates/markmap.html`、`batch_validate.py`、Skill/reference。`lesson_05` 最新 SVG 视口为 `2240x1200`，`fig_p38_004`、`fig_p46_006`、`fig_p63_008` 有 source-backed overlay metadata；新增 `evidence_overlay_metadata` 校验。
+
+**状态**: 生效
+
 ## 2026-05-10 · Compact learning poster 版面质量门禁
 
 **背景**: 第 5 节已经具备 source_quote、图像决策、图像 callout、派生节点和图片可读性校验，但导出仍偏高、留白多，像无限白板截图而不是成品学习海报。用户要求强化中心、收拢分支、合并底部派生内容，并让版面质量可自动验证。

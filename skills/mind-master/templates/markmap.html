@@ -134,10 +134,10 @@
 
     .balanced-layout {
       position: relative;
-      width: max({{CANVAS_WIDTH}}px, 2360px);
-      min-height: max({{CANVAS_HEIGHT}}px, 1260px);
+      width: max({{CANVAS_WIDTH}}px, 2240px);
+      min-height: max({{CANVAS_HEIGHT}}px, 1200px);
       display: grid;
-      grid-template-columns: minmax(0, 960px) 320px minmax(0, 960px);
+      grid-template-columns: minmax(0, 930px) 320px minmax(0, 930px);
       grid-template-rows: minmax(0, 1fr) minmax(104px, auto);
       gap: 10px 12px;
       align-items: stretch;
@@ -169,14 +169,21 @@
     .balanced-live-connectors path {
       fill: none;
       stroke-linecap: round;
-      opacity: 0.34;
+      stroke-linejoin: round;
+      opacity: 0.38;
       filter: none;
+    }
+
+    .balanced-live-connectors .connector-dot {
+      fill: #ffffff;
+      stroke-width: 1.6;
+      opacity: 0.92;
     }
 
     .balanced-side {
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 9px;
       min-width: 0;
       z-index: 1;
@@ -297,6 +304,11 @@
     .balanced-branch-children > .balanced-node.type-table {
       grid-column: 1 / -1;
       max-width: none;
+    }
+
+    .balanced-branch.is-batch-zone .balanced-branch-children > .balanced-node.type-table {
+      grid-column: auto;
+      width: 100%;
     }
 
     .balanced-side.left .balanced-branch-children > .balanced-node.has-visual {
@@ -571,6 +583,21 @@
       background: color-mix(in srgb, var(--branch-color) 5%, #ffffff);
     }
 
+    .balanced-table-wrap .balanced-comparison-matrix {
+      width: 100%;
+      min-width: 100%;
+      table-layout: fixed;
+      font-size: 10px;
+    }
+
+    .balanced-comparison-matrix th,
+    .balanced-comparison-matrix td {
+      padding: 2px 5px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      line-height: 1.1;
+    }
+
     .balanced-equations {
       margin: 8px 0;
     }
@@ -600,6 +627,10 @@
       border: 1px solid color-mix(in srgb, var(--branch-color) 34%, #d0d7de);
       border-radius: 7px;
       background: #ffffff;
+      box-sizing: border-box;
+      max-width: 100%;
+      overflow: hidden;
+      contain: paint;
     }
 
     .balanced-evidence-title {
@@ -608,21 +639,81 @@
       font-size: 12px;
       line-height: 1.28;
       font-weight: 900;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }
 
     .balanced-evidence-body {
       display: grid;
-      grid-template-columns: minmax(210px, 1fr) minmax(88px, 0.36fr);
-      gap: 7px;
+      grid-template-columns: minmax(215px, 1fr) minmax(76px, 0.34fr);
+      gap: 5px;
       align-items: center;
+      min-width: 0;
+      max-width: 100%;
     }
 
     .balanced-evidence-media {
+      position: relative;
       min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      border-radius: 5px;
+    }
+
+    .balanced-evidence-overlays {
+      position: absolute;
+      left: 6px;
+      bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      align-items: flex-start;
+      max-width: calc(100% - 12px);
+      pointer-events: none;
+      box-sizing: border-box;
+    }
+
+    .balanced-evidence-overlay {
+      display: inline-flex;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 2px 6px;
+      border: 1px solid color-mix(in srgb, var(--branch-color) 45%, #ffffff);
+      border-radius: 999px;
+      color: color-mix(in srgb, var(--branch-color) 82%, #111827);
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 2px 7px rgba(15, 23, 42, 0.10);
+      font-size: 9.2px;
+      line-height: 1.2;
+      font-weight: 900;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+      display: -webkit-inline-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .balanced-evidence-card[data-source-id="fig_p38_004"] .balanced-evidence-overlays {
+      inset: 6px 6px auto auto;
+      align-items: flex-end;
+      max-width: calc(100% - 12px);
+    }
+
+    .balanced-evidence-card[data-source-id="fig_p46_006"] .balanced-evidence-overlays {
+      inset: auto 8px 8px auto;
+      align-items: flex-end;
+      max-width: 58%;
+    }
+
+    .balanced-evidence-card[data-source-id="fig_p63_008"] .balanced-evidence-overlays {
+      inset: auto auto 8px 8px;
+      max-width: 68%;
     }
 
     .balanced-images img,
-    .balanced-evidence-grid img {
+    .balanced-evidence-grid img,
+    .balanced-evidence-media > svg {
       display: block;
       width: 100%;
       max-width: 100%;
@@ -632,11 +723,25 @@
     }
 
     .balanced-evidence-card[data-source-id="fig_p38_004"] .balanced-evidence-body {
-      grid-template-columns: minmax(260px, 1fr) 112px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 5px;
     }
 
     .balanced-evidence-card[data-source-id="fig_p38_004"] img {
       max-height: 132px;
+    }
+
+    .balanced-evidence-card[data-source-id="fig_p38_004"] .balanced-image-callouts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      width: 100%;
+    }
+
+    .balanced-evidence-card[data-source-id="fig_p38_004"] .balanced-image-callouts li {
+      margin-bottom: 0;
     }
 
     .balanced-evidence-card[data-source-id="fig_p46_006"] img {
@@ -654,6 +759,8 @@
       color: var(--mm-muted);
       font-size: 10px;
       line-height: 1.25;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }
 
     .balanced-source-label {
@@ -679,6 +786,9 @@
       color: var(--mm-text);
       font-size: 10px;
       line-height: 1.25;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .balanced-image-callouts li {
@@ -688,6 +798,14 @@
       color: color-mix(in srgb, var(--branch-color) 78%, #111827);
       background: color-mix(in srgb, var(--branch-color) 8%, #ffffff);
       font-weight: 700;
+      max-width: 100%;
+      box-sizing: border-box;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
     }
 
     .balanced-redraws {
@@ -858,12 +976,135 @@
         cy: rect.top - layoutRect.top + rect.height / 2
       };
     }
-    function connectorPath(startX, startY, endX, endY, side) {
-      const distance = Math.max(80, Math.abs(endX - startX));
-      const curve = Math.min(260, Math.max(80, distance * 0.55));
-      const c1 = side === 'left' ? startX - curve : startX + curve;
-      const c2 = side === 'left' ? endX + curve : endX - curve;
-      return `M ${startX.toFixed(1)} ${startY.toFixed(1)} C ${c1.toFixed(1)} ${startY.toFixed(1)}, ${c2.toFixed(1)} ${endY.toFixed(1)}, ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+    function edgePort(rect, side, targetY, inset = 16) {
+      const minY = rect.top + Math.min(inset, rect.height / 2);
+      const maxY = rect.bottom - Math.min(inset, rect.height / 2);
+      return {
+        x: side === 'left' ? rect.left : rect.right,
+        y: clamp(targetY, minY, maxY)
+      };
+    }
+    function pathFromPoints(points) {
+      return points.map((point, index) => {
+        const prefix = index === 0 ? 'M' : 'L';
+        return `${prefix} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+      }).join(' ');
+    }
+    function connectorRoute(start, end, side, role) {
+      const gap = Math.abs(end.x - start.x);
+      if (role === 'branch-child') {
+        if (gap < 18) {
+          return [start, end];
+        }
+        const midX = (start.x + end.x) / 2;
+        return [start, { x: midX, y: start.y }, { x: midX, y: end.y }, end];
+      }
+      const sign = side === 'left' ? -1 : 1;
+      const stub = Math.min(56, Math.max(28, gap * 0.24));
+      const startStub = { x: start.x + sign * stub, y: start.y };
+      const endStub = { x: end.x - sign * stub, y: end.y };
+      const midX = (startStub.x + endStub.x) / 2;
+      return [start, startStub, { x: midX, y: start.y }, { x: midX, y: end.y }, endStub, end];
+    }
+    function segmentIntersectsRect(a, b, rect, padding = 3) {
+      const left = rect.left - padding;
+      const right = rect.right + padding;
+      const top = rect.top - padding;
+      const bottom = rect.bottom + padding;
+      if (Math.abs(a.y - b.y) < 0.5) {
+        const y = a.y;
+        const minX = Math.min(a.x, b.x);
+        const maxX = Math.max(a.x, b.x);
+        return y >= top && y <= bottom && maxX >= left && minX <= right;
+      }
+      if (Math.abs(a.x - b.x) < 0.5) {
+        const x = a.x;
+        const minY = Math.min(a.y, b.y);
+        const maxY = Math.max(a.y, b.y);
+        return x >= left && x <= right && maxY >= top && minY <= bottom;
+      }
+      return false;
+    }
+    function routeIntersectsObstacles(route, obstacles) {
+      for (let i = 1; i < route.length; i += 1) {
+        if (obstacles.some((rect) => segmentIntersectsRect(route[i - 1], route[i], rect))) {
+          return true;
+        }
+      }
+      return false;
+    }
+    function branchChildRoute(start, end, side, obstacles, layoutRect) {
+      const sign = side === 'left' ? -1 : 1;
+      const gap = Math.max(4, Math.abs(end.x - start.x));
+      const gutterX = start.x + sign * Math.min(4, Math.max(3, gap / 8));
+      const base = [start, { x: gutterX, y: start.y }, { x: gutterX, y: end.y }, end];
+      if (!routeIntersectsObstacles(base, obstacles)) {
+        return base;
+      }
+      const corridorMin = Math.min(gutterX, end.x) - 4;
+      const corridorMax = Math.max(gutterX, end.x) + 4;
+      const blockers = obstacles.filter((rect) => rect.right >= corridorMin && rect.left <= corridorMax);
+      if (!blockers.length) {
+        return base;
+      }
+      const minTop = Math.min(...blockers.map((rect) => rect.top));
+      const maxBottom = Math.max(...blockers.map((rect) => rect.bottom));
+      const wantsLowerRoute = end.y >= start.y;
+      const bottomLimit = layoutRect.height - 18;
+      const topCandidate = Math.max(10, minTop - 10);
+      const bottomCandidate = Math.min(bottomLimit, maxBottom + 10);
+      const detourY = wantsLowerRoute || topCandidate < 12 ? bottomCandidate : topCandidate;
+      const detour = [start, { x: gutterX, y: start.y }, { x: gutterX, y: detourY }, { x: end.x, y: detourY }, end];
+      return routeIntersectsObstacles(detour, obstacles) ? base : detour;
+    }
+    function shiftedDotPoint(point, side, target) {
+      const offset = target ? 3.4 : 2.2;
+      const sign = side === 'left' ? 1 : -1;
+      return { x: point.x + sign * offset, y: point.y };
+    }
+    function appendConnector(svg, route, color, role, side, sourceId, targetId, strokeWidth, opacity) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', pathFromPoints(route));
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', strokeWidth);
+      path.setAttribute('opacity', opacity);
+      path.setAttribute('data-kind', role === 'root-h2' ? 'root-branch' : 'branch-child');
+      path.setAttribute('data-connector-role', role);
+      path.setAttribute('data-side', side);
+      path.setAttribute('data-source-id', sourceId);
+      path.setAttribute('data-target-id', targetId);
+      path.setAttribute('data-route-points', JSON.stringify(route.map((point) => [Number(point.x.toFixed(1)), Number(point.y.toFixed(1))])));
+      svg.appendChild(path);
+      const targetDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      const dotPoint = shiftedDotPoint(route[route.length - 1], side, true);
+      targetDot.setAttribute('cx', dotPoint.x.toFixed(1));
+      targetDot.setAttribute('cy', dotPoint.y.toFixed(1));
+      targetDot.setAttribute('r', role === 'root-h2' ? '3.7' : '3.1');
+      targetDot.setAttribute('stroke', color);
+      targetDot.setAttribute('class', 'connector-dot connector-target');
+      targetDot.setAttribute('data-connector-role', role);
+      targetDot.setAttribute('data-source-id', sourceId);
+      targetDot.setAttribute('data-target-id', targetId);
+      targetDot.setAttribute('data-side', side);
+      svg.appendChild(targetDot);
+      if (role === 'branch-child') {
+        const sourceDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        const sourcePoint = shiftedDotPoint(route[0], side, false);
+        sourceDot.setAttribute('cx', sourcePoint.x.toFixed(1));
+        sourceDot.setAttribute('cy', sourcePoint.y.toFixed(1));
+        sourceDot.setAttribute('r', '2.2');
+        sourceDot.setAttribute('stroke', color);
+        sourceDot.setAttribute('class', 'connector-dot connector-source');
+        sourceDot.setAttribute('data-connector-role', role);
+        sourceDot.setAttribute('data-source-id', sourceId);
+        sourceDot.setAttribute('data-target-id', targetId);
+        sourceDot.setAttribute('data-side', side);
+        svg.appendChild(sourceDot);
+      }
+      return path;
     }
     function drawBalancedConnectors() {
       const layout = document.querySelector('.balanced-layout');
@@ -885,28 +1126,42 @@
         if (!hub) return;
         const color = getComputedStyle(branch).getPropertyValue('--branch-color').trim() || '#1f4e5f';
         const hubRect = rectInLayout(hub, layoutRect);
-        const startX = side === 'left' ? rootRect.left : rootRect.right;
-        const endX = side === 'left' ? hubRect.right : hubRect.left;
-        const rootPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        rootPath.setAttribute('d', connectorPath(startX, rootRect.cy, endX, hubRect.cy, side));
-        rootPath.setAttribute('stroke', color);
-        rootPath.setAttribute('stroke-width', '3.2');
-        rootPath.setAttribute('opacity', '0.34');
-        rootPath.setAttribute('data-kind', 'root-branch');
-        svg.appendChild(rootPath);
+        const rootPortSide = side === 'left' ? 'left' : 'right';
+        const hubPortSide = side === 'left' ? 'right' : 'left';
+        const rootStart = edgePort(rootRect, rootPortSide, hubRect.cy, 26);
+        const hubEnd = edgePort(hubRect, hubPortSide, rootStart.y, 18);
+        appendConnector(
+          svg,
+          connectorRoute(rootStart, hubEnd, side, 'root-h2'),
+          color,
+          'root-h2',
+          side,
+          root.dataset.nodeId || 'root',
+          hub.dataset.nodeId || branch.dataset.nodeId || '',
+          '2.5',
+          '0.36'
+        );
         count += 1;
 
-        branch.querySelectorAll('.balanced-branch-children > .balanced-node').forEach((child) => {
-          const childRect = rectInLayout(child, layoutRect);
-          const childStartX = side === 'left' ? hubRect.left : hubRect.right;
-          const childEndX = side === 'left' ? childRect.right : childRect.left;
-          const childPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          childPath.setAttribute('d', connectorPath(childStartX, hubRect.cy, childEndX, childRect.cy, side));
-          childPath.setAttribute('stroke', color);
-          childPath.setAttribute('stroke-width', '1.4');
-          childPath.setAttribute('opacity', '0.28');
-          childPath.setAttribute('data-kind', 'branch-child');
-          svg.appendChild(childPath);
+        const childEntries = Array.from(branch.querySelectorAll('.balanced-branch-children > .balanced-node')).map((child) => ({
+          child,
+          rect: rectInLayout(child, layoutRect)
+        }));
+        childEntries.forEach(({ child, rect: childRect }) => {
+          const obstacles = childEntries.filter((entry) => entry.child !== child).map((entry) => entry.rect);
+          const hubStart = edgePort(hubRect, side === 'left' ? 'left' : 'right', childRect.cy, 15);
+          const childEnd = edgePort(childRect, side === 'left' ? 'right' : 'left', hubStart.y, 12);
+          appendConnector(
+            svg,
+            branchChildRoute(hubStart, childEnd, side, obstacles, layoutRect),
+            color,
+            'branch-child',
+            side,
+            hub.dataset.nodeId || branch.dataset.nodeId || '',
+            child.dataset.nodeId || '',
+            '1.45',
+            '0.42'
+          );
           count += 1;
         });
       });

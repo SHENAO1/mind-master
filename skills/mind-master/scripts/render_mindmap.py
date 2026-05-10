@@ -116,6 +116,30 @@ LESSON05_EVIDENCE = {
         "source_figure_label": "图5-7",
     },
 }
+LESSON05_OVERLAYS = {
+    "fig_p38_004": [
+        {
+            "label": "1~1000 单次近似同耗时",
+            "source_quote": "Batch Size 的范围是 1~1000，所需的时间几乎是一样的",
+        },
+        {
+            "label": "大 Batch 缩短 Epoch",
+            "source_quote": "较大的 Batch Size 反而能缩短训练时间",
+        },
+    ],
+    "fig_p46_006": [
+        {
+            "label": "Flat Minima 区域",
+            "source_quote": "小 Batch 倾向于引导模型走到平坦的极小值区域（Flat Minima）",
+        }
+    ],
+    "fig_p63_008": [
+        {
+            "label": "历史方向 + 当前梯度",
+            "source_quote": "Momentum 会将“前一次的更新方向”与“当前梯度”加权求和",
+        }
+    ],
+}
 GREEK_REPLACEMENTS = {
     "η": r"\eta",
     "θ": r"\theta",
@@ -439,6 +463,8 @@ def ensure_evidence_metadata(raw: dict[str, Any], asset: dict[str, Any], effecti
     alt = str(raw.get("alt") or asset.get("alt") or source_id or "source figure").strip()
     raw.setdefault("evidence_title", lesson_defaults.get("evidence_title") or f"图证：{alt}")
     raw.setdefault("source_figure_label", lesson_defaults.get("source_figure_label") or raw.get("caption") or asset.get("caption") or source_id)
+    if source_id in LESSON05_OVERLAYS and not raw.get("overlay_highlights"):
+        raw["overlay_highlights"] = LESSON05_OVERLAYS[source_id]
 
 
 def readability_tier_for(source_id: str, decision: str, raw: dict[str, Any], asset: dict[str, Any]) -> str:
@@ -1208,8 +1234,8 @@ def node_visuals(
     images_by_id: dict[str, dict[str, Any]],
     project_path: Path,
     exports_dir: Path,
-) -> list[dict[str, str]]:
-    resolved: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    resolved: list[dict[str, Any]] = []
     raw_images = list(node.get("images", []) or [])
     for decision in figure_decisions_by_node(outline).get(str(node.get("id")), []):
         if str(decision.get("decision") or "") in IMAGE_LAYOUT_DECISIONS:
@@ -1243,6 +1269,7 @@ def node_visuals(
                     "source_figure_label": str(raw.get("source_figure_label") or source_id),
                     "source_path": str(raw.get("path") or asset.get("path") or ""),
                     "callouts": callouts,
+                    "overlay_highlights": raw.get("overlay_highlights", []) or [],
                     "readability_tier": tier,
                     "min_width": str(min_width),
                     "min_height": str(min_height),
@@ -1265,6 +1292,7 @@ def node_visuals(
                     "template_id": template_id,
                     "svg": template.read_text(encoding="utf-8"),
                     "callouts": callouts,
+                    "overlay_highlights": raw.get("overlay_highlights", []) or [],
                     "readability_tier": tier,
                     "min_width": str(min_width),
                     "min_height": str(min_height),
@@ -1283,6 +1311,7 @@ def node_visuals(
                 "evidence_title": str(raw.get("evidence_title") or ""),
                 "source_figure_label": str(raw.get("source_figure_label") or source_id),
                 "callouts": callouts,
+                "overlay_highlights": raw.get("overlay_highlights", []) or [],
                 "readability_tier": tier,
                 "min_width": str(min_width),
                 "min_height": str(min_height),
@@ -1413,7 +1442,7 @@ def render_table_html(node: dict[str, Any]) -> str:
     )
 
 
-def render_template_redraw_html(visual: dict[str, str]) -> str:
+def render_template_redraw_html(visual: dict[str, Any]) -> str:
     source_id = html.escape(str(visual.get("id") or ""), quote=True)
     alt = html_text(visual.get("alt") or "SVG redraw")
     instruction = html_text(visual.get("instruction") or "")
@@ -1426,13 +1455,14 @@ def render_template_redraw_html(visual: dict[str, str]) -> str:
     min_height = html.escape(str(visual.get("min_height") or "115"), quote=True)
     svg = str(visual.get("svg") or "")
     callouts = render_image_callouts(visual.get("callouts", []) or [])
+    overlays = render_evidence_overlays(visual.get("overlay_highlights", []) or [])
     return (
         f'<figure class="balanced-redraw-card balanced-evidence-card" data-source-id="{source_id}" '
         f'data-image-kind="{kind}" data-asset-type="{asset_type}" data-template-id="{template_id}" '
         f'data-min-width="{min_width}" data-min-height="{min_height}" data-redraw-required="true">'
         f'<div class="balanced-evidence-title">{evidence_title}</div>'
         '<div class="balanced-evidence-body">'
-        f'<div class="balanced-evidence-media">{svg}</div>'
+        f'<div class="balanced-evidence-media">{svg}{overlays}</div>'
         f"{callouts}"
         "</div>"
         f'<figcaption><span class="balanced-source-label">{source_label}</span>{instruction}</figcaption>'
@@ -1452,7 +1482,19 @@ def render_image_callouts(callouts: list[dict[str, str]]) -> str:
     return '<ul class="balanced-image-callouts">' + "".join(items[:2]) + "</ul>"
 
 
-def render_preserve_image_html(image: dict[str, str]) -> str:
+def render_evidence_overlays(overlays: list[dict[str, str]]) -> str:
+    items = []
+    for overlay in overlays:
+        label = html_text(overlay.get("label") or overlay.get("text") or "")
+        quote = html.escape(str(overlay.get("source_quote") or ""), quote=True)
+        if label and quote:
+            items.append(f'<span class="balanced-evidence-overlay" data-source-quote="{quote}">{label}</span>')
+    if not items:
+        return ""
+    return '<div class="balanced-evidence-overlays">' + "".join(items[:2]) + "</div>"
+
+
+def render_preserve_image_html(image: dict[str, Any]) -> str:
     src = html.escape(image["path"], quote=True)
     alt = html_text(image["alt"])
     evidence_title = html_text(image.get("evidence_title") or image["alt"])
@@ -1462,12 +1504,13 @@ def render_preserve_image_html(image: dict[str, str]) -> str:
     min_width = html.escape(str(image.get("min_width") or "170"), quote=True)
     min_height = html.escape(str(image.get("min_height") or "96"), quote=True)
     callouts = render_image_callouts(image.get("callouts", []) or [])
+    overlays = render_evidence_overlays(image.get("overlay_highlights", []) or [])
     return (
         f'<figure class="balanced-preserve-image balanced-evidence-card is-{kind}" data-source-id="{source_id}" '
         f'data-image-kind="{kind}" data-min-width="{min_width}" data-min-height="{min_height}">'
         f'<div class="balanced-evidence-title">{evidence_title}</div>'
         '<div class="balanced-evidence-body">'
-        f'<div class="balanced-evidence-media"><img src="{src}" alt="{alt}"></div>'
+        f'<div class="balanced-evidence-media"><img src="{src}" alt="{alt}">{overlays}</div>'
         f"{callouts}"
         "</div>"
         f'<figcaption><span class="balanced-source-label">{source_label}</span>{alt}</figcaption></figure>'
@@ -1555,6 +1598,9 @@ def render_node_html(
     exports_dir: Path,
     include_children: bool = True,
     extra_class: str = "",
+    parent_id: str = "",
+    connector_role: str = "",
+    side: str = "",
 ) -> str:
     node_id = html.escape(str(node.get("id") or ""), quote=True)
     node_type = html.escape(str(node.get("type") or "concept"), quote=True)
@@ -1572,6 +1618,12 @@ def render_node_html(
         f'data-node-id="{node_id}"',
         f'data-node-type="{node_type}"',
     ]
+    if parent_id:
+        attrs.append(f'data-parent-id="{html.escape(parent_id, quote=True)}"')
+    if connector_role:
+        attrs.append(f'data-connector-role="{html.escape(connector_role, quote=True)}"')
+    if side:
+        attrs.append(f'data-side="{html.escape(side, quote=True)}"')
     if section_id:
         attrs.append(f'data-section-id="{html.escape(section_id, quote=True)}"')
     icon_key = str(node.get("icon") or "").strip()
@@ -1638,20 +1690,41 @@ def render_node_html(
                 child = visible_children[0]
                 child_id = html.escape(str(child.get("id") or ""), quote=True)
                 parts.append(
-                    f'<p class="balanced-leaf-list is-plain" data-node-id="{child_id}">'
+                    f'<p class="balanced-leaf-list is-plain" data-node-id="{child_id}" '
+                    f'data-parent-id="{node_id}" data-connector-role="leaf"'
+                    + (f' data-side="{html.escape(side, quote=True)}"' if side else "")
+                    + ">"
                     f'{html_text(child.get("title") or child.get("id") or "")}</p>'
                 )
             elif visible_children:
                 parts.append('<ol class="balanced-leaf-list">')
                 for child in visible_children:
                     child_id = html.escape(str(child.get("id") or ""), quote=True)
-                    parts.append(f'<li data-node-id="{child_id}">{html_text(child.get("title") or child.get("id") or "")}</li>')
+                    side_attr = f' data-side="{html.escape(side, quote=True)}"' if side else ""
+                    parts.append(
+                        f'<li data-node-id="{child_id}" data-parent-id="{node_id}" '
+                        f'data-connector-role="leaf"{side_attr}>'
+                        f'{html_text(child.get("title") or child.get("id") or "")}</li>'
+                    )
                 parts.append("</ol>")
         elif include_children:
             child_class = "balanced-branch-children" if depth == 0 else "balanced-node-children"
             parts.append(f'<div class="{child_class}">')
             for child in children:
-                parts.append(render_node_html(child, depth + 1, outline, images_by_id, project_path, exports_dir))
+                child_role = "h3-card" if depth == 0 else "child-card"
+                parts.append(
+                    render_node_html(
+                        child,
+                        depth + 1,
+                        outline,
+                        images_by_id,
+                        project_path,
+                        exports_dir,
+                        parent_id=str(node.get("id") or ""),
+                        connector_role=child_role,
+                        side=side,
+                    )
+                )
             parts.append("</div>")
 
     parts.append("</article>")
@@ -1825,7 +1898,17 @@ def build_balanced_html(
             if isinstance(child, dict) and not is_learning_enhancement_node(child)
         ]
         child_html = "".join(
-            render_node_html(child, 1, outline, images_by_id, project_path, exports_dir)
+            render_node_html(
+                child,
+                1,
+                outline,
+                images_by_id,
+                project_path,
+                exports_dir,
+                parent_id=node_id,
+                connector_role="h3-card",
+                side=side,
+            )
             for child in children
         )
         child_block = f'<div class="balanced-branch-children">{child_html}</div>' if child_html else ""
@@ -1838,6 +1921,9 @@ def build_balanced_html(
             exports_dir,
             include_children=False,
             extra_class="balanced-hub",
+            parent_id="root",
+            connector_role="h2-hub",
+            side=side,
         )
         return (
             f'<section class="balanced-branch{dominant}{semantic_class}" data-side="{side}" data-node-id="{html.escape(node_id, quote=True)}" '
@@ -1874,7 +1960,8 @@ def build_balanced_html(
         '<section class="balanced-layout mind-master-render" data-layout-mode="balanced_two_sided">',
         '<svg class="balanced-live-connectors" aria-hidden="true"></svg>',
         render_side(left_nodes, "left"),
-        '<section class="balanced-root" aria-label="root">',
+        '<section class="balanced-root" aria-label="root" data-node-id="root" data-parent-id="" '
+        'data-connector-role="root" data-side="center">',
         root_heading,
     ]
     if root_summary:

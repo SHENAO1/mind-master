@@ -184,7 +184,11 @@ Compact poster rendering:
 
 - Pair image/redraw media and conclusions in a single teaching callout group; use callout chips or a short side conclusion column when it reduces height.
 - Keep evidence media readable while preventing a single figure card from dominating branch height.
+- Keep every evidence-card element inside the card boundary: image/redraw media, source figure label, figcaption, callout chips, and overlay chips must not spill outside `.balanced-evidence-card`.
+- Callout and overlay chips must allow wrapping (`white-space: normal`, `overflow-wrap: anywhere`) and may line-clamp to two visible lines. Do not hide `evidence_title`, source labels, or source-backed callouts to pass layout checks.
+- Overlay chips must be positioned inside the evidence media area, not in a fixed outside column. For wide data evidence such as `fig_p38_004`, prioritize the image area and place callout chips below or within the card rather than using a rigid right rail that can overflow.
 - Important source-backed figures such as `fig_p38_004` and `fig_p63_008` may receive a light highlight frame or marker to guide attention, but the highlight must only point to the original figure's source-backed conclusion.
+- If an overlay/highlight is rendered, store it as metadata such as `overlay_highlights[]` with a short label and `source_quote`; validators should reject decorative overlays without source backing.
 - Multi-figure evidence for one source claim may render as a side-by-side evidence grid, especially for `5.1.2` where `fig_p32_003` and `fig_p38_004` jointly explain update frequency and epoch-time efficiency.
 
 Lesson 5 evidence titles:

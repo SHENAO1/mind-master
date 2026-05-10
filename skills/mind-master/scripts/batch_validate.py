@@ -38,6 +38,7 @@ LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
 SCREENSHOT_EMBED_BLOCK_TYPES = {"screenshot", "slide", "photo"}
 ALLOWED_FIGURE_DECISIONS = {"preserve_full", "preserve_crop", "redraw_high_fidelity", "redraw_concept", "omit"}
 LEGACY_FIGURE_DECISIONS = {"preserve", "crop_preserve", "redraw"}
+EXPECTED_OVERLAY_SOURCE_IDS = {"fig_p38_004", "fig_p46_006", "fig_p63_008"}
 SVG_BLOCK_RE = re.compile(r"<svg\b[^>]*>(.*?)</svg>", re.I | re.S)
 SVG_PATH_D_RE = re.compile(r"<path\b[^>]*\bd=[\"']([^\"']+)[\"']", re.I)
 SVG_COMMAND_RE = re.compile(r"[A-Za-z]")
@@ -933,6 +934,69 @@ def check_connector_noise(browser: dict[str, Any]) -> dict[str, Any]:
     return {"passed": not failures, "metrics": metrics, "failures": failures}
 
 
+def check_connector_target_clarity(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "connector clarity applies to balanced poster layouts"}
+    metrics = browser.get("connectorMetrics") or {}
+    failures = metrics.get("targetClarityFailures") or []
+    return {"passed": not failures, "metrics": {"count": metrics.get("count", 0)}, "failures": failures}
+
+
+def check_connector_endpoint_visible(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "connector endpoint visibility applies to balanced poster layouts"}
+    metrics = browser.get("connectorMetrics") or {}
+    failures = metrics.get("endpointFailures") or []
+    return {"passed": not failures, "metrics": {"count": metrics.get("count", 0)}, "failures": failures}
+
+
+def check_connector_crossing_limit(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "connector crossing limit applies to balanced poster layouts"}
+    metrics = browser.get("connectorMetrics") or {}
+    crossing_count = int(metrics.get("crossingCount") or 0)
+    failures = []
+    if crossing_count > 1:
+        failures.append(f"connector crossing count {crossing_count} exceeds 1")
+    return {"passed": not failures, "metrics": {"crossingCount": crossing_count}, "failures": failures}
+
+
+def check_connector_outside_card_ratio(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "connector outside-card ratio applies to balanced poster layouts"}
+    metrics = browser.get("connectorMetrics") or {}
+    ratio = float(metrics.get("outsideCardRatio") if metrics.get("outsideCardRatio") is not None else 1)
+    failures = []
+    if ratio < 0.96:
+        failures.append(f"connector_outside_card_ratio {ratio:.3f} is below 0.960")
+    return {"passed": not failures, "metrics": {"outsideCardRatio": ratio}, "failures": failures}
+
+
+def check_connector_parent_child_mapping(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "connector parent-child mapping applies to balanced poster layouts"}
+    metrics = browser.get("connectorMetrics") or {}
+    failures = metrics.get("mappingFailures") or []
+    connectors = metrics.get("connectors") or []
+    missing_roles = [
+        item for item in connectors
+        if not item.get("sourceId") or not item.get("targetId") or not item.get("role") or not item.get("side")
+    ]
+    if missing_roles:
+        failures = list(failures) + [{"reason": "connector missing metadata", "connectors": missing_roles}]
+    return {"passed": not failures, "metrics": {"count": metrics.get("count", 0)}, "failures": failures}
+
+
 def check_poster_packing(browser: dict[str, Any]) -> dict[str, Any]:
     if browser.get("skipped"):
         return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
@@ -1021,6 +1085,95 @@ def check_evidence_compactness(browser: dict[str, Any]) -> dict[str, Any]:
                 }
             )
     return {"passed": not failures, "checked": len(cards), "cards": cards, "failures": failures}
+
+
+def check_evidence_card_containment(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    data = browser.get("evidenceContainment") or {}
+    failures = list(data.get("cardFailures") or []) + [
+        {"source_id": source_id, "reason": "media outside evidence card"}
+        for source_id in data.get("mediaFailures", []) or []
+    ]
+    return {"passed": not failures, "metrics": data, "failures": failures}
+
+
+def check_evidence_chip_overflow(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    data = browser.get("evidenceContainment") or {}
+    failures = data.get("chipFailures") or []
+    return {"passed": not failures, "metrics": {"chipFailures": failures}, "failures": failures}
+
+
+def check_overlay_inside_media_bounds(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    data = browser.get("evidenceContainment") or {}
+    failures = data.get("overlayFailures") or []
+    return {"passed": not failures, "metrics": {"overlayFailures": failures}, "failures": failures}
+
+
+def check_node_overflow_detection(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    failures = browser.get("nodeOverflowFailures") or []
+    return {"passed": not failures, "checked": len(failures), "failures": failures}
+
+
+def check_evidence_caption_containment(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    data = browser.get("evidenceContainment") or {}
+    failures = data.get("captionFailures") or []
+    return {"passed": not failures, "metrics": {"captionFailures": failures}, "failures": failures}
+
+
+def check_evidence_overlay_metadata(mindmap: dict[str, Any], source_text: str, browser: dict[str, Any]) -> dict[str, Any]:
+    rendered = {
+        str(card.get("sourceId") or ""): card
+        for card in browser.get("evidenceCards", []) or []
+        if isinstance(card, dict)
+    }
+    failures: list[dict[str, Any]] = []
+    checked = 0
+    for item in active_figure_decisions(mindmap):
+        source_id = str(item.get("source_id") or item.get("id") or "")
+        overlays = [overlay for overlay in item.get("overlay_highlights", []) or [] if isinstance(overlay, dict)]
+        if source_id in EXPECTED_OVERLAY_SOURCE_IDS and not overlays:
+            failures.append({"source_id": source_id, "reason": "missing overlay_highlights metadata"})
+            continue
+        if not overlays:
+            continue
+        checked += 1
+        for overlay in overlays:
+            label = str(overlay.get("label") or overlay.get("text") or "").strip()
+            quote = str(overlay.get("source_quote") or "").strip()
+            if not label:
+                failures.append({"source_id": source_id, "reason": "overlay label missing"})
+            if not quote or not source_quote_found(quote, source_text):
+                failures.append({"source_id": source_id, "reason": "overlay source_quote not found", "source_quote": quote})
+        card = rendered.get(source_id)
+        if browser and not browser.get("skipped"):
+            if not card:
+                failures.append({"source_id": source_id, "reason": "overlay card not rendered"})
+            elif int(card.get("overlayCount") or 0) < min(len(overlays), 2):
+                failures.append(
+                    {
+                        "source_id": source_id,
+                        "reason": "overlay count below metadata",
+                        "rendered": card.get("overlayCount"),
+                        "metadata": len(overlays),
+                    }
+                )
+            elif not card.get("evidenceOverlayVisible"):
+                failures.append({"source_id": source_id, "reason": "overlay not visibly rendered"})
+    return {
+        "passed": not failures,
+        "expected": sorted(EXPECTED_OVERLAY_SOURCE_IDS),
+        "checked": checked,
+        "failures": failures,
+    }
 
 
 def check_learning_band_compactness(browser: dict[str, Any]) -> dict[str, Any]:
@@ -1265,6 +1418,82 @@ const timeout = Number(process.argv[3] || 60000);
       cx: Math.round(rect.left + rect.width / 2),
       cy: Math.round(rect.top + rect.height / 2)
     }) : null;
+    const relativeRect = (rect) => layoutRect && rect ? ({
+      left: rect.left - layoutRect.left,
+      top: rect.top - layoutRect.top,
+      right: rect.right - layoutRect.left,
+      bottom: rect.bottom - layoutRect.top,
+      width: rect.width,
+      height: rect.height
+    }) : null;
+    const isInsideRect = (inner, outer, tolerance = 1) => {
+      if (!inner || !outer) return false;
+      return inner.left >= outer.left - tolerance &&
+        inner.right <= outer.right + tolerance &&
+        inner.top >= outer.top - tolerance &&
+        inner.bottom <= outer.bottom + tolerance;
+    };
+    const pointInRect = (point, rect, tolerance = 0) => {
+      if (!point || !rect) return false;
+      return point.x >= rect.left - tolerance && point.x <= rect.right + tolerance &&
+        point.y >= rect.top - tolerance && point.y <= rect.bottom + tolerance;
+    };
+    const cssEscape = (value) => (window.CSS && CSS.escape)
+      ? CSS.escape(String(value))
+      : String(value).replace(/["\\]/g, '\\$&');
+    const routePoints = (path) => {
+      try {
+        return JSON.parse(path.dataset.routePoints || '[]').map((pair) => ({ x: Number(pair[0]), y: Number(pair[1]) }));
+      } catch (_err) {
+        return [];
+      }
+    };
+    const routeSegments = (points) => points.slice(1).map((point, index) => [points[index], point]);
+    const orientation = (a, b, c) => Math.sign((b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y));
+    const onSegment = (a, b, c) => Math.min(a.x, c.x) - 0.5 <= b.x && b.x <= Math.max(a.x, c.x) + 0.5 &&
+      Math.min(a.y, c.y) - 0.5 <= b.y && b.y <= Math.max(a.y, c.y) + 0.5;
+    const segmentsIntersect = (s1, s2) => {
+      const [p1, q1] = s1;
+      const [p2, q2] = s2;
+      const shared = [p1, q1].some((a) => [p2, q2].some((b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5));
+      if (shared) return false;
+      const o1 = orientation(p1, q1, p2);
+      const o2 = orientation(p1, q1, q2);
+      const o3 = orientation(p2, q2, p1);
+      const o4 = orientation(p2, q2, q1);
+      if (o1 !== o2 && o3 !== o4) return true;
+      if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+      if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+      if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+      if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+      return false;
+    };
+    const sampleRoute = (points) => {
+      const samples = [];
+      const segments = routeSegments(points);
+      const lengths = segments.map(([a, b]) => Math.hypot(b.x - a.x, b.y - a.y));
+      const total = lengths.reduce((sum, value) => sum + value, 0) || 1;
+      let travelled = 0;
+      segments.forEach(([a, b], index) => {
+        const steps = Math.max(2, Math.ceil(lengths[index] / 24));
+        for (let step = 0; step <= steps; step += 1) {
+          const local = step / steps;
+          const x = a.x + (b.x - a.x) * local;
+          const y = a.y + (b.y - a.y) * local;
+          samples.push({ x, y, t: (travelled + lengths[index] * local) / total });
+        }
+        travelled += lengths[index];
+      });
+      return samples;
+    };
+    const nearRectEdge = (point, rect, tolerance = 5) => {
+      if (!point || !rect) return false;
+      const onVertical = Math.min(Math.abs(point.x - rect.left), Math.abs(point.x - rect.right)) <= tolerance &&
+        point.y >= rect.top - tolerance && point.y <= rect.bottom + tolerance;
+      const onHorizontal = Math.min(Math.abs(point.y - rect.top), Math.abs(point.y - rect.bottom)) <= tolerance &&
+        point.x >= rect.left - tolerance && point.x <= rect.right + tolerance;
+      return onVertical || onHorizontal;
+    };
     const unionRect = (elements) => {
       const rects = elements
         .map((el) => el.getBoundingClientRect())
@@ -1319,9 +1548,42 @@ const timeout = Number(process.argv[3] || 60000);
     const evidenceCards = Array.from(document.querySelectorAll('.balanced-evidence-card')).map((figure) => {
       const media = figure.querySelector('img, svg');
       const cardRect = figure.getBoundingClientRect();
+      const mediaWrapRect = figure.querySelector('.balanced-evidence-media')?.getBoundingClientRect();
       const rect = media ? media.getBoundingClientRect() : figure.getBoundingClientRect();
       const titleRect = figure.querySelector('.balanced-evidence-title')?.getBoundingClientRect();
       const calloutRect = figure.querySelector('.balanced-image-callouts')?.getBoundingClientRect();
+      const overlays = Array.from(figure.querySelectorAll('.balanced-evidence-overlay[data-source-quote]'));
+      const visibleOverlays = overlays.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      });
+      const containmentTargets = Array.from(figure.querySelectorAll(
+        '.balanced-evidence-title, .balanced-evidence-media, .balanced-evidence-media img, .balanced-evidence-media > svg, .balanced-image-callouts, .balanced-image-callouts li, figcaption'
+      ));
+      const containmentFailures = containmentTargets
+        .filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && !isInsideRect(r, cardRect, 1.5);
+        })
+        .map((el) => ({
+          tag: el.tagName.toLowerCase(),
+          className: el.className || '',
+          rect: rectObj(el.getBoundingClientRect())
+        }));
+      const chipOverflow = Array.from(figure.querySelectorAll('.balanced-image-callouts li')).filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && (
+          !isInsideRect(r, cardRect, 1.5) ||
+          r.width > cardRect.width + 1 ||
+          el.scrollWidth > el.clientWidth + 2
+        );
+      });
+      const overlayOutside = overlays.filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && (!mediaWrapRect || !isInsideRect(r, mediaWrapRect, 1.5));
+      });
+      const caption = figure.querySelector('figcaption');
+      const captionRect = caption?.getBoundingClientRect();
       return {
         sourceId: figure.dataset.sourceId || '',
         kind: figure.dataset.imageKind || '',
@@ -1336,7 +1598,15 @@ const timeout = Number(process.argv[3] || 60000);
         evidenceTitleVisible: !!titleRect && titleRect.width > 0 && titleRect.height > 0,
         calloutCount: figure.querySelectorAll('.balanced-image-callouts li[data-source-quote]').length,
         evidenceCalloutVisible: !!calloutRect && calloutRect.width > 0 && calloutRect.height > 0,
-        hasSourceLabel: !!figure.querySelector('.balanced-source-label')
+        overlayCount: overlays.length,
+        evidenceOverlayVisible: overlays.length === 0 || visibleOverlays.length === overlays.length,
+        hasSourceLabel: !!figure.querySelector('.balanced-source-label'),
+        containmentFailures,
+        chipOverflowCount: chipOverflow.length,
+        overlayOutsideCount: overlayOutside.length,
+        captionInsideCard: !captionRect || isInsideRect(captionRect, cardRect, 1.5),
+        mediaInsideCard: isInsideRect(rect, cardRect, 1.5),
+        overlayInsideMedia: overlays.length === 0 || overlayOutside.length === 0
       };
     });
     const evidenceGrids = Array.from(document.querySelectorAll('.balanced-node.has-multiple-visuals .balanced-evidence-grid')).map((grid) => {
@@ -1363,9 +1633,119 @@ const timeout = Number(process.argv[3] || 60000);
         headerHeight: header ? Math.round(header.height) : 0
       };
     });
-    const connectors = Array.from(document.querySelectorAll('.balanced-live-connectors path')).map((path) => {
+    const nodeOverflowFailures = layout ? Array.from(layout.querySelectorAll('.balanced-node, .balanced-root, .balanced-learning-band, .balanced-band-group')).flatMap((node) => {
+      const nodeRect = node.getBoundingClientRect();
+      return Array.from(node.children || [])
+        .filter((child) => !child.classList.contains('balanced-branch-children') && !child.classList.contains('balanced-node-children'))
+        .filter((child) => {
+          const r = child.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && !isInsideRect(r, nodeRect, 2);
+        })
+        .map((child) => ({
+          nodeId: node.dataset.nodeId || '',
+          childTag: child.tagName.toLowerCase(),
+          childClass: child.className || '',
+          nodeRect: rectObj(nodeRect),
+          childRect: rectObj(child.getBoundingClientRect())
+        }));
+    }) : [];
+    const cardRects = layout ? Array.from(layout.querySelectorAll('.balanced-root, .balanced-node, .balanced-learning-band, .balanced-evidence-card')).map((el) => ({
+      nodeId: el.dataset.nodeId || el.dataset.sourceId || '',
+      ownerNodeId: el.closest('.balanced-node')?.dataset.nodeId || el.dataset.nodeId || '',
+      role: el.dataset.connectorRole || (el.classList.contains('balanced-evidence-card') ? 'evidence-card' : ''),
+      rect: relativeRect(el.getBoundingClientRect())
+    })).filter((item) => item.rect) : [];
+    const connectorDots = Array.from(document.querySelectorAll('.balanced-live-connectors circle.connector-target'));
+    const connectorPaths = Array.from(document.querySelectorAll('.balanced-live-connectors path'));
+    const connectorSegmentGroups = connectorPaths.map((path) => ({
+      path,
+      points: routePoints(path),
+      segments: routeSegments(routePoints(path))
+    }));
+    let connectorCrossingCount = 0;
+    for (let i = 0; i < connectorSegmentGroups.length; i += 1) {
+      for (let j = i + 1; j < connectorSegmentGroups.length; j += 1) {
+        const a = connectorSegmentGroups[i];
+        const b = connectorSegmentGroups[j];
+        if (
+          a.path.dataset.sourceId === b.path.dataset.sourceId ||
+          a.path.dataset.sourceId === b.path.dataset.targetId ||
+          a.path.dataset.targetId === b.path.dataset.sourceId ||
+          a.path.dataset.targetId === b.path.dataset.targetId
+        ) {
+          continue;
+        }
+        if (a.segments.some((s1) => b.segments.some((s2) => segmentsIntersect(s1, s2)))) {
+          connectorCrossingCount += 1;
+        }
+      }
+    }
+    let outsideSamples = 0;
+    let totalSamples = 0;
+    const mappingFailures = [];
+    const endpointFailures = [];
+    const targetClarityFailures = [];
+    const connectors = connectorPaths.map((path) => {
       const width = Number(path.getAttribute('stroke-width') || 0);
       const opacity = Number(path.getAttribute('opacity') || getComputedStyle(path).opacity || 0);
+      const role = path.dataset.connectorRole || path.dataset.kind || '';
+      const sourceId = path.dataset.sourceId || '';
+      const targetId = path.dataset.targetId || '';
+      const sourceSelector = role === 'root-h2'
+        ? '.balanced-root'
+        : `.balanced-node[data-node-id="${cssEscape(sourceId)}"][data-connector-role="h2-hub"]`;
+      const targetSelector = role === 'root-h2'
+        ? `.balanced-node[data-node-id="${cssEscape(targetId)}"][data-connector-role="h2-hub"]`
+        : `.balanced-branch-children > .balanced-node[data-node-id="${cssEscape(targetId)}"]`;
+      const sourceEl = layout ? layout.querySelector(sourceSelector) : null;
+      const targetEl = layout ? layout.querySelector(targetSelector) : null;
+      if (!sourceEl || !targetEl) {
+        mappingFailures.push({ role, sourceId, targetId, reason: 'source or target element missing' });
+      } else {
+        const expectedParent = role === 'root-h2' ? 'root' : sourceId;
+        if ((targetEl.dataset.parentId || '') !== expectedParent) {
+          mappingFailures.push({
+            role,
+            sourceId,
+            targetId,
+            expectedParent,
+            actualParent: targetEl.dataset.parentId || ''
+          });
+        }
+      }
+      const points = routePoints(path);
+      const start = points[0];
+      const end = points[points.length - 1];
+      const sourceRel = sourceEl ? relativeRect(sourceEl.getBoundingClientRect()) : null;
+      const targetRel = targetEl ? relativeRect(targetEl.getBoundingClientRect()) : null;
+      if (!nearRectEdge(start, sourceRel) || !nearRectEdge(end, targetRel)) {
+        targetClarityFailures.push({ role, sourceId, targetId, start, end });
+      }
+      const matchingDot = connectorDots.find((dot) =>
+        dot.dataset.sourceId === sourceId &&
+        dot.dataset.targetId === targetId &&
+        dot.dataset.connectorRole === role &&
+        dot.getBoundingClientRect().width > 0 &&
+        dot.getBoundingClientRect().height > 0
+      );
+      if (!matchingDot) {
+        endpointFailures.push({ role, sourceId, targetId, reason: 'target endpoint dot missing' });
+      }
+      const samples = sampleRoute(points);
+      samples.forEach((point) => {
+        if (point.t < 0.04 || point.t > 0.96) {
+          return;
+        }
+        totalSamples += 1;
+        const insideBlockingCard = cardRects.some((item) => {
+          if (!item.rect) return false;
+          if (item.nodeId === sourceId || item.nodeId === targetId || item.ownerNodeId === sourceId || item.ownerNodeId === targetId) return false;
+          return pointInRect(point, item.rect, -2);
+        });
+        if (!insideBlockingCard) {
+          outsideSamples += 1;
+        }
+      });
       let intersectsRoot = false;
       if (rootRect && layoutRect && path.getBBox) {
         const b = path.getBBox();
@@ -1379,11 +1759,17 @@ const timeout = Number(process.argv[3] || 60000);
       }
       return {
         kind: path.dataset.kind || '',
+        role,
+        side: path.dataset.side || '',
+        sourceId,
+        targetId,
         strokeWidth: width,
         opacity,
-        intersectsRoot
+        intersectsRoot,
+        pointCount: points.length
       };
     });
+    const connectorOutsideCardRatio = totalSamples ? Number((outsideSamples / totalSamples).toFixed(3)) : 1;
     const imageReadability = Array.from(document.querySelectorAll('[data-image-kind]')).map((figure) => {
       const media = figure.querySelector('img, svg');
       const rect = media ? media.getBoundingClientRect() : figure.getBoundingClientRect();
@@ -1427,6 +1813,7 @@ const timeout = Number(process.argv[3] || 60000);
       },
       evidenceCards,
       evidenceGrids,
+      nodeOverflowFailures,
       tableMetrics,
       bottomLearningBand: {
         present: !!bottomBand,
@@ -1442,7 +1829,28 @@ const timeout = Number(process.argv[3] || 60000);
         maxStrokeWidth: connectors.length ? Math.max(...connectors.map(c => c.strokeWidth)) : 0,
         maxOpacity: connectors.length ? Math.max(...connectors.map(c => c.opacity)) : 0,
         rootIntersections: connectors.filter(c => c.intersectsRoot && c.kind !== 'root-branch').length,
+        crossingCount: connectorCrossingCount,
+        outsideCardRatio: connectorOutsideCardRatio,
+        mappingFailures,
+        endpointFailures,
+        targetClarityFailures,
         connectors
+      },
+      evidenceContainment: {
+        cardFailures: evidenceCards.filter((card) => (card.containmentFailures || []).length > 0).map((card) => ({
+          sourceId: card.sourceId,
+          failures: card.containmentFailures
+        })),
+        chipFailures: evidenceCards.filter((card) => Number(card.chipOverflowCount || 0) > 0).map((card) => ({
+          sourceId: card.sourceId,
+          count: card.chipOverflowCount
+        })),
+        overlayFailures: evidenceCards.filter((card) => Number(card.overlayOutsideCount || 0) > 0).map((card) => ({
+          sourceId: card.sourceId,
+          count: card.overlayOutsideCount
+        })),
+        captionFailures: evidenceCards.filter((card) => !card.captionInsideCard).map((card) => card.sourceId),
+        mediaFailures: evidenceCards.filter((card) => !card.mediaInsideCard).map((card) => card.sourceId)
       }
     };
   });
@@ -1577,9 +1985,20 @@ def main(argv: list[str] | None = None) -> int:
         checks["evidence_card_quality"] = check_evidence_card_quality(mindmap, source_text, checks["browser"])
         checks["bottom_learning_band"] = check_bottom_learning_band(root, checks["browser"])
         checks["connector_noise"] = check_connector_noise(checks["browser"])
+        checks["connector_target_clarity"] = check_connector_target_clarity(checks["browser"])
+        checks["connector_endpoint_visible"] = check_connector_endpoint_visible(checks["browser"])
+        checks["connector_crossing_limit"] = check_connector_crossing_limit(checks["browser"])
+        checks["connector_outside_card_ratio"] = check_connector_outside_card_ratio(checks["browser"])
+        checks["connector_parent_child_mapping"] = check_connector_parent_child_mapping(checks["browser"])
         checks["poster_packing"] = check_poster_packing(checks["browser"])
         checks["batch_height_compactness"] = check_batch_height_compactness(checks["browser"])
         checks["evidence_compactness"] = check_evidence_compactness(checks["browser"])
+        checks["evidence_card_containment"] = check_evidence_card_containment(checks["browser"])
+        checks["evidence_chip_overflow"] = check_evidence_chip_overflow(checks["browser"])
+        checks["overlay_inside_media_bounds"] = check_overlay_inside_media_bounds(checks["browser"])
+        checks["node_overflow_detection"] = check_node_overflow_detection(checks["browser"])
+        checks["evidence_caption_containment"] = check_evidence_caption_containment(checks["browser"])
+        checks["evidence_overlay_metadata"] = check_evidence_overlay_metadata(mindmap, source_text, checks["browser"])
         checks["learning_band_compactness"] = check_learning_band_compactness(checks["browser"])
 
         for name, check in checks.items():

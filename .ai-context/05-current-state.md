@@ -4,7 +4,7 @@
 
 **最近更新**: 2026-05-10
 
-> Mind-Master 已完成正式渲染/验证/导出闭环，并把第 5 节升级为 16:9 compact learning poster：包含五类图片决策、source-backed callout、图标元数据、派生节点标记、图证卡紧凑布局、三栏学习增强带和 poster packing 校验；当前重点是把同一能力产品化并扩展到第 6-8 节。
+> Mind-Master 已完成正式渲染/验证/导出闭环，并把第 5 节升级为更紧凑的 compact learning poster：包含五类图片决策、source-backed callout、图标元数据、派生节点标记、图证卡 containment、重点图 overlay metadata、语义端口连接线、三栏学习增强带和 poster packing 校验；当前重点是把同一能力产品化并扩展到第 6-8 节。
 
 ## ✅ Done
 - 仓库基础文件已建立：`README.md`、`README_CN.md`、`.env.example`、`.gitignore`、`requirements.txt`。
@@ -43,10 +43,13 @@
 - 2026-05-10 基于用户最新截图、源 Word 第 5 节和联网思维导图样例完成下一步优化分析：当前主要瓶颈从 source fidelity 转为版面海报化、图证卡可读性、分支空间效率和跨章节通用化。
 - 2026-05-10 已把 `lesson_05` 升级为 `compact_learning_poster`：图像渲染为图证卡，关键词/调参启示/Momentum 优势合并为底部学习增强带，连接线降噪；最新 SVG 视口 `2100x1627`，`layout_aesthetics`、`evidence_card_quality`、`bottom_learning_band`、`connector_noise` 与既有 source fidelity 校验全部通过。
 - 2026-05-10 继续把 `lesson_05` 压缩为成品级学习海报：导出裁切到 `.balanced-layout`，SVG 视口 `2360x1331`，比例 `1.773`；新增 `poster_packing`、`batch_height_compactness`、`evidence_compactness`、`learning_band_compactness` 全部通过。`fig_p32_003` 与 `fig_p38_004` 已并排图证，`fig_p46_006` 裁剪收紧，表 5-1 改为 compact comparison matrix，学习增强带固定三栏且只渲染 10 个关键词。
+- 2026-05-10 本轮继续压缩 `lesson_05`：SVG 视口改为 `2240x1200`，Batch 左侧实际高度约从 `1168px` 降到 `944px`；表 5-1 可与 5.1.3 并排，重点图 `fig_p38_004`、`fig_p46_006`、`fig_p63_008` 增加 source-backed overlay highlights，并新增 `evidence_overlay_metadata` 校验。最新 `batch_validate.py` 与 14 项 unittest 均通过。
+- 2026-05-10 本轮修复 `lesson_05` 连接线语义与图证卡溢出：root/H2/H3 写出 `data-node-id`、`data-parent-id`、`data-connector-role`、`data-side`；连接线改为端口折线 + endpoint dots，并绕开兄弟卡/图证卡。`fig_p38_004` 改为图片优先、callout chips 位于卡内下方，overlay chips 限制在 media 内；新增 connector clarity 与 evidence containment/overflow 校验全部通过。最新 `extract_assets.py`、`render_mindmap.py`、`export_mindmap.py`、`batch_validate.py` 和 14 项 unittest 均通过。
 
 ## ⏭️ Next
-- 下一轮应继续把 `lesson_05` 的 source-faithful compact poster 规则产品化，减少 lesson-specific 手工规则，并把第 6-8 节纳入五类图片策略、callout、派生节点标记、poster packing 和 evidence compactness 回归。
+- 下一轮应继续把 `lesson_05` 的 source-faithful compact poster 规则产品化，减少 lesson-specific 手工规则，并把第 6-8 节纳入五类图片策略、callout、派生节点标记、poster packing、connector clarity 和 evidence containment 回归。
 - 后续可继续细调 `lesson_05` 的区域式留白感，例如根据真实 bbox 做局部重排，而不是再牺牲 source fidelity 或新增伪章节。
+- 后续可把本轮 overlay metadata 与更紧凑 Batch matrix 规则抽象成非 lesson-specific 策略，避免只对第 5 节硬编码。
 - 后续可将 compact learning poster 的四类版面门禁推广到 `lesson_06`-`lesson_08`，观察多公式/多图章节是否需要分章节阈值或更多 evidence card 模板。
 - 下一轮可把同一 profile 应用于第 6-8 节，重点观察多公式、多图章节下 `preserve_crop` 的裁剪质量和伪章节编号校验是否过严。
 - 继续复核第 6 节并用新的 `layout_profile` 链路重生成，确认多公式、多图场景下校验仍可靠。

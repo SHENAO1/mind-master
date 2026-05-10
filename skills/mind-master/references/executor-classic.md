@@ -33,6 +33,9 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Opposed or paired top-level themes should be placed on opposite sides of the canvas, not adjacent on the same side.
 - Branch visual weight should reflect subtree size and importance. Use child count multiplied by a weighting factor to size or allocate space, instead of forcing every first-level branch to be equal.
 - Route connectors around nodes. A connector must not cross through another node when a clear route exists.
+- In balanced poster mode, connectors are semantic parent-child links, not background decoration. Root, H2 hubs, and H3 cards must expose `data-node-id`, `data-parent-id`, `data-connector-role`, and `data-side`, and each connector must map those IDs exactly.
+- Root-to-H2 and H2-to-H3 links should use different hierarchy weights: root-to-H2 is slightly thicker but subdued; H2-to-H3 is thinner, shorter, and uses visible endpoint dots so the target card is unambiguous.
+- H2-to-H3 connectors should route through the narrow gutter between the hub and child grid, with small detours around sibling cards when needed. They must not sweep as large decorative curves across blank space or through evidence-card media.
 - Child cards should remain compact. Use a maximum width around 320 px; wrap long titles/content rather than stretching cards into dashboard panels.
 - Sibling cards under the same H2 may stack tightly. Do not force equal spacing when a compact cluster is more readable.
 - Connect child cards back to the H2 branch hub with same-color thin connectors so cards do not appear to float independently.
@@ -88,7 +91,10 @@ Compact poster validation should check:
 - bottom learning band has exactly three columns: Momentum advantages, tuning hints, and keywords; render at most 10 keywords and keep any extra terms in metadata.
 - Batch-side height remains compact, and multi-figure evidence grids plus comparison tables pass compactness thresholds.
 - evidence cards have readable rendered area;
+- optional evidence overlays must have source-backed metadata and remain visible as lightweight teaching markers;
 - connector strokes are thin/low-opacity and do not cross the center card body.
+- connector target clarity, endpoint visibility, crossing limit, outside-card ratio, and parent-child mapping all pass browser validation.
+- evidence card containment, chip overflow, overlay media bounds, node overflow, and caption containment all pass browser validation.
 
 ## Content Rules
 
