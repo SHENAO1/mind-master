@@ -22,6 +22,14 @@ Allowed decisions:
 
 Record the decision in both `figure_decisions` and `coverage_report.figures` / `coverage_report.omitted`. Do not silently drop source images.
 
+Layout crowding is not a valid reason to delete a source figure. If the map is crowded, change the layout first: switch to `balanced_two_sided`, resize the figure, crop it, or move it within the same semantic branch. Core teaching figures should be enlarged, cropped, or rearranged before redraw is considered; redraw or omission is the last resort and still requires an explicit recorded decision.
+
+Every source image in the active section must:
+
+- appear in `figure_decisions`;
+- appear in either `coverage_report.figures` or `coverage_report.omitted`;
+- keep its source ID/path traceable even when cropped, redrawn, or omitted.
+
 ## Selection Rules
 
 Keep an image when:
@@ -44,9 +52,11 @@ Reject an image when:
 
 Use this priority order for every candidate visual:
 
-1. Prefer no image. If a concept is clear with concise text, table structure, formula, or layout, do not add an image.
-2. Prefer SVG redraw. If a schematic is useful, such as Sharp vs Flat Minima, a vector-sum diagram, or a simple process diagram, the Executor should redraw it as clean inline SVG instead of embedding a raster slide screenshot.
-3. Use the source image only as the last option. Embed a DOCX/PDF image only when it is hard to redraw, such as real experimental curves, heatmaps, screenshots of data, or visually dense evidence, and only when it remains readable at node size.
+1. Keep core teaching figures with their related node when they carry source meaning that text, a table, or a formula cannot fully replace.
+2. Crop or resize source figures when they are useful but crowded.
+3. Reflow the layout, including switching to `balanced_two_sided`, when several useful figures make the map too tall.
+4. Redraw simple instructional schematics as SVG only when redraw improves readability without changing the source claim.
+5. Omit only decorative, duplicated, tiny, unreadable, or low-value figures, and record the omission explicitly.
 
 Source images used in final output must have:
 
@@ -68,7 +78,7 @@ Image Decision GATE: 这张候选图是数据图（可保留）还是示意图�
 
 Default decisions:
 
-- slide screenshots, whiteboard photos, and lecture schematic images extracted from DOCX use `redraw` when the idea is needed and `omitted` when the image repeats text;
+- slide screenshots, whiteboard photos, and lecture schematic images extracted from DOCX use `image` or `crop` when they are core teaching figures; use `redraw` only when a clean equivalent is more readable and source meaning is preserved;
 - real data curves, heatmaps, tables captured as images, or non-redrawable screenshots may use `embed_source` if readable;
 - decorative logos, cover images, and dense text screenshots use `no image`.
 

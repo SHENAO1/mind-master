@@ -26,6 +26,22 @@
 
 ---
 
+## 2026-05-10 · 密集导图采用 layout_profile 驱动的双侧语义布局
+
+**背景**: 第 5 节课程内容包含 27 个导图节点、7 张教学图、1 张表和 1 个公式，默认 Markmap 容易导出为纵向长条，PNG/PDF 阅读体验差。
+
+**选项**:
+- A: 继续使用默认 Markmap 单向布局，并靠缩小画布或删减图片改善高度。
+- B: 增加 `layout_profile` 密度画像，密集内容自动切换到 `balanced_two_sided`；HTML 用语义化左右双栏流式布局承载同一份 mindmap 数据，导出仍来自 HTML。
+
+**决策**: 选择 B。
+
+**理由**: `layout_profile` 可以把布局触发原因和分支权重写入可验证数据结构；双侧流式布局避免固定坐标海报，也不需要为了美观删除 H2/H3、表格、公式或源图决策。
+
+**影响**: 更新 `render_mindmap.py`、`templates/markmap.html`、`export_mindmap.py`、`batch_validate.py` 和 Skill references；第 5 节回归产物新增 `layout_self_check.md`，校验新增布局画像、长宽比、左右权重和 source fidelity 检查。
+
+**状态**: 生效
+
 ## 2026-05-09 · 初始化跨助手上下文
 
 **背景**: 项目需要让 Codex、Claude Code 和 GitHub Copilot 共享当前完成度、架构说明、决策与下一步，避免每次切换助手都重新说明。

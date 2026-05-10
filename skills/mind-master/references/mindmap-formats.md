@@ -69,6 +69,37 @@ Top-level Strategist fields:
 
 - `coverage_report`: required for Word/PDF conversion quality checks
 - `figure_decisions`: required when the active source contains images
+- `layout_profile`: optional Strategist hint and required Executor output. If missing, `render_mindmap.py` must generate it from the final tree.
+
+## Layout Profile
+
+`layout_profile` records the density decision used by the renderer. It is a layout contract, not a license to simplify source content.
+
+```json
+{
+  "layout_profile": {
+    "mode": "vertical | balanced_two_sided | compact_radial",
+    "density_score": 0,
+    "reason": "",
+    "branch_weights": [
+      {
+        "node_id": "n_batch",
+        "weight": 18,
+        "side": "left"
+      }
+    ]
+  }
+}
+```
+
+Rules:
+
+- Legal `mode` values are `vertical`, `balanced_two_sided`, and `compact_radial`.
+- `density_score` is the weighted subtree score used to choose the layout.
+- `branch_weights` must include every first-level branch under the root.
+- `side` is `center` for `vertical` / `compact_radial`, and `left` or `right` for `balanced_two_sided`.
+- Layout changes must not remove or merge H2/H3 sections, tables, formulas, or figure decisions.
+- Under `balanced_two_sided`, all H3 and lower content under the same H2 stays on the same side as that H2.
 
 ## Coverage Report
 
@@ -177,6 +208,7 @@ Required top-level fields:
 - `assets`
 - `coverage_report`
 - `figure_decisions`
+- `layout_profile`
 - `markdown`
 - `html`
 
@@ -265,6 +297,9 @@ PNG default scale: `2`.
 - `table_checks`: table node presence, required fields, and row/column integrity
 - `heading_coverage`: H2/H3 source headings mapped into the mind map
 - `image_decisions`: source images and their keep/crop/redraw/omit decisions
+- `layout_profile_checks`: legal layout mode, density score, and first-level branch coverage
+- `layout_readability`: export aspect ratio and balanced side-weight checks
+- `source_fidelity`: H2/H3, table, formula, and figure coverage after layout switching
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence
 
 ## Error Helper

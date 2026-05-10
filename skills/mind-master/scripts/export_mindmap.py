@@ -13,6 +13,11 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    from PIL import Image
+except ImportError:  # pragma: no cover
+    Image = None  # type: ignore[assignment]
+
 try:  # Keep checkpoint symbols printable on Windows consoles.
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -95,30 +100,58 @@ const timeout = Number(timeoutRaw || 60000);
     deviceScaleFactor: Math.max(1, scale)
   });
   await page.goto('file:///' + htmlPath.replace(/\\/g, '/'), { waitUntil: 'networkidle', timeout });
-  await page.waitForSelector('.markmap svg', { timeout });
+  await page.waitForFunction(() => {
+    return window.MIND_MASTER_READY ||
+      document.querySelector('.balanced-layout') ||
+      document.querySelector('.markmap svg');
+  }, { timeout });
   await page.waitForTimeout(2200);
   await page.evaluate(() => {
     const shell = document.querySelector('.mind-master-shell') || document.body;
     shell.scrollIntoView();
   });
-  const svg = await page.$eval('.markmap svg', el => {
-    const clone = el.cloneNode(true);
+  const svg = await page.evaluate(() => {
+    const mode = document.body.dataset.layoutMode || 'vertical';
+    if (mode === 'balanced_two_sided') {
+      const target = document.querySelector('.balanced-layout');
+      const rect = target.getBoundingClientRect();
+      const width = Math.ceil(rect.width);
+      const height = Math.ceil(rect.height);
+      const clone = target.cloneNode(true);
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+      const style = document.createElement('style');
+      style.textContent = Array.from(document.querySelectorAll('style')).map(el => el.textContent || '').join('\\n');
+      wrapper.appendChild(style);
+      wrapper.appendChild(clone);
+      const html = new XMLSerializer().serializeToString(wrapper);
+      return '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height +
+        '" viewBox="0 0 ' + width + ' ' + height + '"><foreignObject width="100%" height="100%">' +
+        html + '</foreignObject></svg>';
+    }
+    const markmap = document.querySelector('.markmap svg');
+    const clone = markmap.cloneNode(true);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     return '<!doctype svg>\\n' + clone.outerHTML;
   });
   fs.writeFileSync(svgPath, svg, 'utf8');
 
   const target = await page.$('.mind-master-shell') || await page.$('body');
+  const bounds = await target.boundingBox();
   await target.screenshot({ path: pngPath, omitBackground: false });
   await page.pdf({
     path: pdfPath,
     printBackground: true,
     preferCSSPageSize: false,
-    width: '2200px',
-    height: '1500px',
+    width: Math.ceil((bounds && bounds.width) || 2200) + 'px',
+    height: Math.ceil((bounds && bounds.height) || 1500) + 'px',
     margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
   });
-  const box = await page.$eval('.markmap svg', el => {
+  const box = await page.evaluate(() => {
+    const mode = document.body.dataset.layoutMode || 'vertical';
+    const el = mode === 'balanced_two_sided'
+      ? document.querySelector('.balanced-layout')
+      : document.querySelector('.markmap svg');
     const rect = el.getBoundingClientRect();
     return { width: Math.round(rect.width), height: Math.round(rect.height) };
   });
@@ -159,6 +192,19 @@ const timeout = Number(timeoutRaw || 60000);
     return data
 
 
+def write_single_page_pdf_from_png(png_path: Path, pdf_path: Path) -> dict:
+    if Image is None:
+        return {"pdf_mode": "browser_pdf", "reason": "Pillow is not available."}
+    with Image.open(png_path) as image:
+        rgb = image.convert("RGB")
+        rgb.save(pdf_path, "PDF", resolution=144.0)
+        return {
+            "pdf_mode": "single_page_png_pdf",
+            "pdf_source": str(png_path),
+            "pdf_page_pixels": {"width": image.width, "height": image.height},
+        }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Export Markmap HTML to SVG, PNG, and PDF.")
     parser.add_argument("project", type=Path, help="Mind-Master project path.")
@@ -182,6 +228,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         svg_box = export_with_node(paths, node, args.scale, args.timeout_ms)
+        pdf_info = write_single_page_pdf_from_png(paths["png"], paths["pdf"])
         report = {
             "passed": True,
             "exported_at": utc_now(),
@@ -191,6 +238,7 @@ def main(argv: list[str] | None = None) -> int:
             "pdf": str(paths["pdf"]),
             "scale": args.scale,
             "svg_viewport": svg_box,
+            **pdf_info,
         }
         write_json(paths["export_report"], report)
     except Exception as exc:

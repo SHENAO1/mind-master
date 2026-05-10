@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{TITLE}}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18.12"></script>
   <style>
     :root {
@@ -63,6 +65,10 @@
       overflow: hidden;
     }
 
+    .markmap.is-hidden {
+      display: none;
+    }
+
     .markmap svg {
       width: 100%;
       height: 100%;
@@ -118,27 +124,446 @@
       font-size: 1.05em;
     }
 
+    .balanced-layout {
+      position: relative;
+      width: max({{CANVAS_WIDTH}}px, 2200px);
+      min-height: max({{CANVAS_HEIGHT}}px, 1120px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 280px minmax(0, 1fr) minmax(0, 1fr);
+      gap: 26px;
+      align-items: stretch;
+      padding: 28px;
+      box-sizing: border-box;
+      background:
+        linear-gradient(rgba(31, 78, 95, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 78, 95, 0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      border: 1px solid rgba(31, 78, 95, 0.12);
+      border-radius: 8px;
+      box-shadow: 0 14px 38px rgba(31, 78, 95, 0.10);
+    }
+
+    body:not([data-layout-mode="balanced_two_sided"]) .balanced-layout {
+      display: none;
+    }
+
+    .balanced-live-connectors {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .balanced-live-connectors path {
+      fill: none;
+      stroke-linecap: round;
+      opacity: 0.95;
+      filter: drop-shadow(0 2px 5px rgba(31, 78, 95, 0.18));
+    }
+
+    .balanced-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      gap: 22px;
+      min-width: 0;
+      z-index: 1;
+    }
+
+    .balanced-side.left {
+      grid-column: 1 / 3;
+      grid-row: 1;
+    }
+
+    .balanced-side.right {
+      grid-column: 4 / 6;
+      grid-row: 1;
+    }
+
+    .balanced-root {
+      grid-column: 3;
+      grid-row: 1;
+      position: relative;
+      z-index: 2;
+      align-self: center;
+      min-height: 230px;
+      padding: 24px 20px;
+      border: 3px solid #0f1f4f;
+      border-radius: 18px;
+      background: #1f4e5f;
+      color: #ffffff;
+      box-shadow: 0 12px 30px rgba(31, 78, 95, 0.20);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .balanced-root h1 {
+      margin: 0 0 12px;
+      font-size: 33px;
+      line-height: 1.22;
+    }
+
+    .balanced-root p {
+      margin: 0 auto 12px;
+      max-width: 220px;
+      font-size: 15px;
+      line-height: 1.45;
+      opacity: 0.88;
+    }
+
+    .balanced-root ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 13px;
+      line-height: 1.55;
+      opacity: 0.95;
+    }
+
+    .balanced-branch {
+      position: relative;
+      min-width: 0;
+      display: grid;
+      align-items: center;
+      gap: 14px;
+      --branch-color: var(--mm-root);
+    }
+
+    .balanced-branch[data-side="left"] {
+      grid-template-columns: minmax(0, 1fr) 210px;
+    }
+
+    .balanced-branch[data-side="right"] {
+      grid-template-columns: 210px minmax(0, 1fr);
+    }
+
+    .balanced-branch.is-dominant {
+      min-height: 820px;
+    }
+
+    .balanced-node {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1.5px solid color-mix(in srgb, var(--branch-color) 76%, #ffffff);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 5px 16px rgba(31, 78, 95, 0.07);
+      box-sizing: border-box;
+      break-inside: avoid;
+    }
+
+    .balanced-hub {
+      text-align: center;
+      border-width: 2px;
+      box-shadow: 0 8px 18px rgba(31, 78, 95, 0.12);
+    }
+
+    .balanced-node.depth-0 {
+      border-top: 5px solid var(--branch-color);
+      background: rgba(255, 255, 255, 0.98);
+    }
+
+    .balanced-node.depth-1,
+    .balanced-node.depth-2,
+    .balanced-node.depth-3,
+    .balanced-node.depth-4 {
+      box-shadow: none;
+      background: #ffffff;
+    }
+
+    .balanced-side.left .balanced-hub {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .balanced-side.left .balanced-branch-children {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .balanced-side.right .balanced-hub {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .balanced-side.right .balanced-branch-children {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .balanced-node h2,
+    .balanced-node h3,
+    .balanced-node h4,
+    .balanced-node h5,
+    .balanced-node h6 {
+      margin: 0 0 7px;
+      color: var(--branch-color);
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .balanced-node h2 {
+      font-size: 25px;
+    }
+
+    .balanced-node h3 {
+      font-size: 16px;
+    }
+
+    .balanced-node h4,
+    .balanced-node h5,
+    .balanced-node h6 {
+      font-size: 13px;
+    }
+
+    .balanced-description,
+    .balanced-summary,
+    .balanced-notes {
+      margin: 0 0 7px;
+      color: var(--mm-text);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .balanced-summary {
+      color: var(--mm-muted);
+    }
+
+    .balanced-notes {
+      padding-left: 18px;
+    }
+
+    .balanced-branch-children {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      align-items: start;
+    }
+
+    .balanced-branch.is-dominant .balanced-branch-children {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .balanced-node-children {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .balanced-leaf-list {
+      margin: 6px 0 0;
+      padding: 0 0 0 24px;
+      color: var(--mm-text);
+      font-size: 12px;
+      line-height: 1.52;
+    }
+
+    .balanced-leaf-list li {
+      margin: 3px 0;
+      padding-left: 2px;
+      marker: none;
+    }
+
+    .balanced-leaf-list li::marker {
+      color: var(--branch-color);
+      font-weight: 800;
+    }
+
+    .balanced-node.type-table,
+    .balanced-table-wrap {
+      grid-column: 1 / -1;
+    }
+
+    .balanced-table-wrap {
+      margin-top: 8px;
+      overflow-x: auto;
+    }
+
+    .balanced-table-wrap table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      font-size: 12px;
+    }
+
+    .balanced-table-wrap th,
+    .balanced-table-wrap td {
+      border: 1px solid #d0d7de;
+      padding: 5px 7px;
+      white-space: nowrap;
+    }
+
+    .balanced-table-wrap th {
+      background: #eef4f4;
+      color: var(--branch-color);
+    }
+
+    .balanced-equations {
+      margin: 8px 0;
+    }
+
+    .balanced-equation {
+      display: block;
+      overflow-x: auto;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #f3f7f7;
+      color: var(--branch-color);
+      font-size: 13px;
+    }
+
+    .balanced-images {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .balanced-images figure {
+      margin: 0;
+      padding: 7px;
+      border: 1px solid #d0d7de;
+      border-radius: 7px;
+      background: #ffffff;
+    }
+
+    .balanced-images img {
+      display: block;
+      width: 100%;
+      max-height: 138px;
+      object-fit: contain;
+    }
+
+    .balanced-images figcaption {
+      margin-top: 5px;
+      color: var(--mm-muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
     .mind-master-source {
       display: none;
     }
   </style>
 </head>
-<body>
+<body data-layout-mode="{{LAYOUT_MODE}}">
   <main class="mind-master-shell">
     <header class="mind-master-header">
       <strong>{{TITLE}}</strong>
       <span>{{META}}</span>
     </header>
-    <div class="markmap">
+    <div class="markmap {{MARKMAP_CLASS}}">
       <script type="text/template">{{MARKDOWN}}</script>
     </div>
+    {{BALANCED_HTML}}
   </main>
   <pre class="mind-master-source" id="mind-master-markdown">{{MARKDOWN}}</pre>
+  <script id="mind-master-layout-profile" type="application/json">{{LAYOUT_PROFILE_JSON}}</script>
   <script>
     window.MIND_MASTER_READY = false;
+    window.MIND_MASTER_LAYOUT_PROFILE = JSON.parse(document.getElementById('mind-master-layout-profile').textContent || '{}');
+    function rectInLayout(element, layoutRect) {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left - layoutRect.left,
+        right: rect.right - layoutRect.left,
+        top: rect.top - layoutRect.top,
+        bottom: rect.bottom - layoutRect.top,
+        width: rect.width,
+        height: rect.height,
+        cx: rect.left - layoutRect.left + rect.width / 2,
+        cy: rect.top - layoutRect.top + rect.height / 2
+      };
+    }
+    function connectorPath(startX, startY, endX, endY, side) {
+      const distance = Math.max(80, Math.abs(endX - startX));
+      const curve = Math.min(260, Math.max(80, distance * 0.55));
+      const c1 = side === 'left' ? startX - curve : startX + curve;
+      const c2 = side === 'left' ? endX + curve : endX - curve;
+      return `M ${startX.toFixed(1)} ${startY.toFixed(1)} C ${c1.toFixed(1)} ${startY.toFixed(1)}, ${c2.toFixed(1)} ${endY.toFixed(1)}, ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+    }
+    function drawBalancedConnectors() {
+      const layout = document.querySelector('.balanced-layout');
+      if (!layout) return 0;
+      const svg = layout.querySelector('.balanced-live-connectors');
+      const root = layout.querySelector('.balanced-root');
+      if (!svg || !root) return 0;
+      const layoutRect = layout.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${layoutRect.width.toFixed(0)} ${layoutRect.height.toFixed(0)}`);
+      svg.setAttribute('width', layoutRect.width.toFixed(0));
+      svg.setAttribute('height', layoutRect.height.toFixed(0));
+      svg.replaceChildren();
+
+      const rootRect = rectInLayout(root, layoutRect);
+      let count = 0;
+      layout.querySelectorAll('.balanced-branch').forEach((branch) => {
+        const side = branch.dataset.side || 'right';
+        const hub = branch.querySelector('.balanced-hub');
+        if (!hub) return;
+        const color = getComputedStyle(branch).getPropertyValue('--branch-color').trim() || '#1f4e5f';
+        const hubRect = rectInLayout(hub, layoutRect);
+        const startX = side === 'left' ? rootRect.left : rootRect.right;
+        const endX = side === 'left' ? hubRect.right : hubRect.left;
+        const rootPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        rootPath.setAttribute('d', connectorPath(startX, rootRect.cy, endX, hubRect.cy, side));
+        rootPath.setAttribute('stroke', color);
+        rootPath.setAttribute('stroke-width', '10');
+        rootPath.setAttribute('opacity', '0.92');
+        rootPath.setAttribute('data-kind', 'root-branch');
+        svg.appendChild(rootPath);
+        count += 1;
+
+        branch.querySelectorAll('.balanced-branch-children > .balanced-node').forEach((child) => {
+          const childRect = rectInLayout(child, layoutRect);
+          const childStartX = side === 'left' ? hubRect.left : hubRect.right;
+          const childEndX = side === 'left' ? childRect.right : childRect.left;
+          const childPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          childPath.setAttribute('d', connectorPath(childStartX, hubRect.cy, childEndX, childRect.cy, side));
+          childPath.setAttribute('stroke', color);
+          childPath.setAttribute('stroke-width', '3');
+          childPath.setAttribute('opacity', '0.68');
+          childPath.setAttribute('data-kind', 'branch-child');
+          svg.appendChild(childPath);
+          count += 1;
+        });
+      });
+      return count;
+    }
+    function renderMath() {
+      if (!window.renderMathInElement) return;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '\\[', right: '\\]', display: true},
+          {left: '$', right: '$', display: false},
+          {left: '\\(', right: '\\)', display: false}
+        ],
+        throwOnError: false
+      });
+    }
     window.setTimeout(function markReady() {
-      window.MIND_MASTER_READY = !!document.querySelector('.markmap svg');
+      renderMath();
+      const mode = document.body.dataset.layoutMode;
+      const connectorCount = mode === 'balanced_two_sided' ? drawBalancedConnectors() : 0;
+      window.MIND_MASTER_READY = mode === 'balanced_two_sided'
+        ? !!document.querySelector('.balanced-layout') && connectorCount > 0
+        : !!document.querySelector('.markmap svg');
     }, 1800);
+    window.addEventListener('load', function () {
+      window.setTimeout(drawBalancedConnectors, 150);
+      window.setTimeout(drawBalancedConnectors, 900);
+      window.setTimeout(drawBalancedConnectors, 1800);
+    });
+    window.addEventListener('resize', drawBalancedConnectors);
   </script>
 </body>
 </html>

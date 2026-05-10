@@ -4,7 +4,7 @@
 
 **最近更新**: 2026-05-10
 
-> Mind-Master 已完成第一批骨架和部分核心脚本；当前重点是把八步流水线缺失脚本补齐，并添加可复现测试样例。
+> Mind-Master 已完成正式渲染/验证/导出闭环，并新增密集导图自适应双侧布局；当前重点是把 source-faithful outline 生成继续产品化，并扩展第 6-8 节回归。
 
 ## ✅ Done
 - 仓库基础文件已建立：`README.md`、`README_CN.md`、`.env.example`、`.gitignore`、`requirements.txt`。
@@ -18,18 +18,21 @@
 - 已根据第 5 节导图失败案例迭代 `skills/mind-master/references/`：补充层级保真、去冗余、source_quote、table 节点、数学包裹、图片重绘优先和布局权重规则。
 - 已用新 reference 规则重生成第 5 节测试导图：`projects/ml_theory2_test/maps/lesson_05_regen/`，包含 outline/mindmap/validation/self_check 和 HTML/SVG/PNG/PDF 导出。
 - 已实现正式 Markmap 闭环脚本：`render_mindmap.py`、`batch_validate.py`、`export_mindmap.py` 与 `templates/markmap.html`；Step 6-8 不再依赖手写固定坐标海报。
+- 已实现 `layout_profile` 自适应布局：密度画像、双侧分支权重分配、双栏语义 HTML、导出适配、`layout_self_check.md` 与布局/保真校验。
 
 ## 🚧 In Progress
 - 已为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏后的源文件为 `sources/ml_theory2_notes.docx`，可作为后续导图生成测试基线。
 - 该测试项目已按 H1 拆分为 4 个章节导图单元：`lesson_05`、`lesson_06`、`lesson_07`、`lesson_08`。生成文件在 `projects/ml_theory2_test/intermediate/sections/` 和 `projects/ml_theory2_test/maps/`，当前按项目规则被 git 忽略。
 - 已生成第 5、6 节导图：`projects/ml_theory2_test/maps/lesson_05/` 与 `projects/ml_theory2_test/maps/lesson_06/` 下包含 `outline.json`、`mindmap.json`、`mindmap.md`、`validation.json`、`self_check.md` 和 HTML/SVG/PNG/PDF 导出。
 - `lesson_05_regen` 是新规则验证版：一级分支严格保留 Batch / Momentum / 本节小结；表 5-1 保留为 table 节点；课程截图不嵌入，改用 SVG 概念重绘。
-- 已用正式 Markmap 链路重跑 `lesson_05`：H2/H3 覆盖 9/9，表 5-1 保留，公式 5-1 通过 KaTeX，7 张源图均有 `figure_decisions`，HTML/SVG/PNG/PDF 已导出。
+- 已用正式链路重跑 `lesson_05` 并触发 `balanced_two_sided`：Batch 在左侧，Momentum 与本节小结在右侧；H2/H3 覆盖 9/9，表 5-1 保留，公式 5-1 通过 KaTeX，7 张源图均有 `figure_decisions`，HTML/SVG/PNG/PDF 已导出。
+- 2026-05-10 再次重生成 `lesson_05`，重新导出 HTML/SVG/PNG/PDF 并通过 `batch_validate.py`；本地预览可用 `projects/ml_theory2_test/maps/lesson_05/exports/lesson_05.html`。
+- 2026-05-10 根据用户反馈将双侧布局继续优化为横向中心放射式：根节点居中，分支枢纽与子卡片围绕分布，新增 root-to-branch / branch-to-child 连接曲线；`lesson_05` 导出视口为 2200x1120，校验记录 `connectorCount=12`。
+- 2026-05-10 修复 PDF 跨页和连接线错位：连接线改为浏览器按真实 DOM 位置动态计算，PDF 改为由高分辨率 PNG 生成单页；`lesson_05` 最新导出 `pdf_mode=single_page_png_pdf`，PNG 4400x2412，`connectorCount=11`。
 
 ## ⏭️ Next
 - 下一轮应继续把 `lesson_05` 的 source-faithful outline 生成方式产品化，减少手工写 outline 的比例。
-- 优化 Markmap 导出 fit/crop，目前 PNG/PDF 已从浏览器导出但画布留白较多。
-- 继续复核第 6 节并用正式 Markmap 链路重生成，确认多公式、多图场景下校验仍可靠。
+- 继续复核第 6 节并用新的 `layout_profile` 链路重生成，确认多公式、多图场景下校验仍可靠。
 - 继续用同一方式生成 `lesson_07`、`lesson_08`；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。
 - 查看 sample v2 产物：`projects/sample/intermediate/outline.json`、`mindmap.json`、`mindmap_v2.md`、`v2_self_check.md`、`validation.json`，以及 `projects/sample/exports/sample.html/svg/png/pdf`。
@@ -37,7 +40,6 @@
 - 若要做真实 v1/v2 差异复盘，需提供或恢复 v1 的 `mindmap.json`、HTML/PNG/PDF 与验证报告。
 - 补齐 `source_to_md/pdf_to_md.py` 和 `source_to_md/web_to_md.py`，让 Step 1 覆盖 README 中承诺的 PDF/Web 输入。
 - 实现 `extract_assets.py`，生成 `assets/images/index.json`，并接入可选 OCR 信息。
-- 实现 `templates/markmap.html`、`render_mindmap.py`、`batch_validate.py`、`export_mindmap.py`，闭环 Step 6 到 Step 8。
 - 增加最小测试样例和测试命令，覆盖项目初始化、DOCX 转换、OMML 转换和后续导出链路。
 - 更新 README 当前阶段，避免继续声称“scripts and references are added in later gated steps”。
 

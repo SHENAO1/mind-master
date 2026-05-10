@@ -32,6 +32,9 @@ IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 DISPLAY_MATH_RE = re.compile(r"\$\$(.+?)\$\$", re.S)
 INLINE_MATH_RE = re.compile(r"(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)", re.S)
 LATEX_LIKE_RE = re.compile(r"(?:_\{|[\^]\{|\\(?:frac|sum|nabla|theta|lambda|eta|sigma|alpha|beta|gamma|mu|Sigma)\b)")
+LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
+SVG_SIZE_RE = re.compile(r"<svg\b[^>]*?(?:width=\"([0-9.]+)[^\"]*\"[^>]*height=\"([0-9.]+)[^\"]*\"|height=\"([0-9.]+)[^\"]*\"[^>]*width=\"([0-9.]+)[^\"]*\")", re.I)
+SVG_VIEWBOX_RE = re.compile(r"viewBox=\"[^\"]*?\s+([0-9.]+)\s+([0-9.]+)\"", re.I)
 
 
 def utc_now() -> str:
@@ -76,6 +79,9 @@ def resolve_context(args: argparse.Namespace) -> dict[str, Path]:
         "markdown": intermediate_dir / "mindmap.md",
         "validation": intermediate_dir / "validation.json",
         "html": exports_dir / f"{base_name}.html",
+        "svg": exports_dir / f"{base_name}.svg",
+        "png": exports_dir / f"{base_name}.png",
+        "export_report": intermediate_dir / "export.json",
         "images_index": project_path / "assets" / "images" / "index.json",
     }
 
@@ -252,23 +258,41 @@ def source_images(source_text: str) -> list[dict[str, str]]:
     return [{"alt": match.group(1), "path": match.group(2)} for match in IMAGE_RE.finditer(source_text)]
 
 
-def image_decision_keys(outline: dict[str, Any], mindmap: dict[str, Any]) -> str:
-    values: list[str] = []
-    for item in (outline.get("figure_decisions") or []) + (mindmap.get("figure_decisions") or []):
-        if isinstance(item, dict):
-            values.extend(str(item.get(key, "")) for key in ("id", "source_id", "path", "source_path"))
-    coverage = mindmap.get("coverage_report") or outline.get("coverage_report") or {}
-    for item in coverage.get("figures", []) or []:
-        if isinstance(item, dict):
-            values.extend(str(item.get(key, "")) for key in ("id", "source_id", "path", "source_path"))
-    return " ".join(values)
+def image_key_values(item: dict[str, Any]) -> list[str]:
+    values = [str(item.get(key, "")) for key in ("id", "source_id", "path", "source_path", "source")]
+    return [value for value in values if value]
+
+
+def image_key_matches(image: dict[str, str], values: list[str]) -> bool:
+    image_path = image["path"]
+    image_name = Path(image_path).name
+    return any(image_path in value or image_name in value for value in values)
 
 
 def check_image_decisions(source_text: str, outline: dict[str, Any], mindmap: dict[str, Any]) -> dict[str, Any]:
     images = source_images(source_text)
-    keys = image_decision_keys(outline, mindmap)
-    missing = [image for image in images if image["path"] not in keys and Path(image["path"]).name not in keys]
-    return {"passed": not missing, "source_image_count": len(images), "missing": missing}
+    figure_values: list[str] = []
+    for item in (outline.get("figure_decisions") or []) + (mindmap.get("figure_decisions") or []):
+        if isinstance(item, dict):
+            figure_values.extend(image_key_values(item))
+
+    coverage_values: list[str] = []
+    coverage = mindmap.get("coverage_report") or outline.get("coverage_report") or {}
+    for bucket in ("figures", "omitted"):
+        for item in coverage.get(bucket, []) or []:
+            if isinstance(item, dict):
+                coverage_values.extend(image_key_values(item))
+
+    decision_missing = [image for image in images if not image_key_matches(image, figure_values)]
+    coverage_missing = [image for image in images if not image_key_matches(image, coverage_values)]
+    missing = {"figure_decisions": decision_missing, "coverage_report": coverage_missing}
+    return {
+        "passed": not decision_missing and not coverage_missing,
+        "source_image_count": len(images),
+        "decision_missing": decision_missing,
+        "coverage_missing": coverage_missing,
+        "missing": missing,
+    }
 
 
 def markdown_images(markdown: str, exports_dir: Path) -> list[dict[str, Any]]:
@@ -292,6 +316,129 @@ def check_rendered_images(markdown: str, exports_dir: Path) -> dict[str, Any]:
     images = markdown_images(markdown, exports_dir)
     failures = [image for image in images if not image.get("alt") or not image.get("exists")]
     return {"passed": not failures, "images": images, "failures": failures}
+
+
+def first_level_branch_ids(root: dict[str, Any]) -> list[str]:
+    return [str(node.get("id")) for node in root.get("children", []) or [] if isinstance(node, dict) and node.get("id")]
+
+
+def check_layout_profile(mindmap: dict[str, Any], root: dict[str, Any]) -> dict[str, Any]:
+    profile = mindmap.get("layout_profile") or {}
+    mode = profile.get("mode")
+    density_score = profile.get("density_score")
+    branch_weights = profile.get("branch_weights") or []
+    branch_ids = set(first_level_branch_ids(root))
+    covered_ids = {
+        str(item.get("node_id"))
+        for item in branch_weights
+        if isinstance(item, dict) and item.get("node_id")
+    }
+    missing = sorted(branch_ids - covered_ids)
+    invalid_sides = []
+    for item in branch_weights:
+        if not isinstance(item, dict):
+            continue
+        side = str(item.get("side") or "")
+        if mode == "balanced_two_sided" and side not in {"left", "right"}:
+            invalid_sides.append({"node_id": item.get("node_id"), "side": side})
+        if mode in {"vertical", "compact_radial"} and side not in {"center", ""}:
+            invalid_sides.append({"node_id": item.get("node_id"), "side": side})
+    passed = mode in LAYOUT_MODES and density_score is not None and not missing and not invalid_sides
+    return {
+        "passed": passed,
+        "mode": mode,
+        "density_score": density_score,
+        "branch_count": len(branch_ids),
+        "covered_branch_count": len(covered_ids),
+        "missing_branch_weights": missing,
+        "invalid_sides": invalid_sides,
+    }
+
+
+def read_svg_dimensions(svg_path: Path) -> tuple[int, int] | None:
+    if not svg_path.exists():
+        return None
+    text = svg_path.read_text(encoding="utf-8", errors="replace")[:5000]
+    match = SVG_SIZE_RE.search(text)
+    if match:
+        width = float(match.group(1) or match.group(4) or 0)
+        height = float(match.group(2) or match.group(3) or 0)
+        if width > 0 and height > 0:
+            return int(round(width)), int(round(height))
+    viewbox = SVG_VIEWBOX_RE.search(text)
+    if viewbox:
+        width = float(viewbox.group(1))
+        height = float(viewbox.group(2))
+        if width > 0 and height > 0:
+            return int(round(width)), int(round(height))
+    return None
+
+
+def exported_dimensions(png_path: Path, svg_path: Path, export_report_path: Path) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    if png_path.exists() and Image is not None:
+        try:
+            with Image.open(png_path) as image:
+                result["png"] = {"width": image.width, "height": image.height}
+        except Exception as exc:  # pragma: no cover - corrupt file branch
+            result["png_error"] = str(exc)
+    svg_size = read_svg_dimensions(svg_path)
+    if svg_size:
+        result["svg"] = {"width": svg_size[0], "height": svg_size[1]}
+    export_report = load_json(export_report_path, {})
+    viewport = export_report.get("svg_viewport") if isinstance(export_report, dict) else None
+    if isinstance(viewport, dict) and "svg" not in result:
+        result["svg"] = {"width": viewport.get("width", 0), "height": viewport.get("height", 0)}
+    return result
+
+
+def check_layout_readability(mindmap: dict[str, Any], paths: dict[str, Path]) -> dict[str, Any]:
+    profile = mindmap.get("layout_profile") or {}
+    mode = profile.get("mode")
+    dimensions = exported_dimensions(paths["png"], paths["svg"], paths["export_report"])
+    aspect_failures: list[dict[str, Any]] = []
+    for kind, size in dimensions.items():
+        if not isinstance(size, dict):
+            continue
+        width = float(size.get("width") or 0)
+        height = float(size.get("height") or 0)
+        ratio = height / width if width else 0
+        size["height_width_ratio"] = ratio
+        if width > 0 and ratio > 2.2:
+            aspect_failures.append({"artifact": kind, "height_width_ratio": ratio, "width": width, "height": height})
+
+    weights = [item for item in profile.get("branch_weights", []) or [] if isinstance(item, dict)]
+    left = sum(int(item.get("weight") or 0) for item in weights if item.get("side") == "left")
+    right = sum(int(item.get("weight") or 0) for item in weights if item.get("side") == "right")
+    total = left + right
+    imbalance = abs(left - right)
+    balance_passed = True
+    balance_reason = ""
+    if mode == "balanced_two_sided" and total > 0:
+        balance_passed = imbalance <= max(8, total * 0.4)
+        if not balance_passed:
+            balance_reason = f"left/right weight imbalance too high: left={left}, right={right}"
+
+    skipped = not dimensions
+    return {
+        "passed": not aspect_failures and balance_passed,
+        "skipped": skipped,
+        "dimensions": dimensions,
+        "aspect_failures": aspect_failures,
+        "side_weights": {"left": left, "right": right, "imbalance": imbalance},
+        "balance_passed": balance_passed,
+        "balance_reason": balance_reason,
+    }
+
+
+def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
+    required = ["heading_coverage", "table_checks", "formula_coverage", "image_decisions"]
+    failures = [name for name in required if not checks.get(name, {}).get("passed", False)]
+    return {
+        "passed": not failures,
+        "depends_on": required,
+        "failed_checks": failures,
+    }
 
 
 def find_node(node_arg: str | None) -> str | None:
@@ -324,15 +471,24 @@ const timeout = Number(process.argv[3] || 60000);
   const errors = [];
   page.on('pageerror', err => errors.push(err.message));
   await page.goto('file:///' + htmlPath.replace(/\\/g, '/'), { waitUntil: 'networkidle', timeout });
-  await page.waitForSelector('.markmap svg', { timeout });
+  await page.waitForFunction(() => {
+    return window.MIND_MASTER_READY ||
+      document.querySelector('.balanced-layout') ||
+      document.querySelector('.markmap svg');
+  }, { timeout });
   await page.waitForTimeout(5000);
   const result = await page.evaluate(() => {
-    const svg = document.querySelector('.markmap svg');
-    const box = svg ? svg.getBoundingClientRect() : null;
+    const layoutMode = document.body.dataset.layoutMode || 'vertical';
+    const target = layoutMode === 'balanced_two_sided'
+      ? document.querySelector('.balanced-layout')
+      : document.querySelector('.markmap svg');
+    const box = target ? target.getBoundingClientRect() : null;
     return {
+      layoutMode,
       katexErrors: document.querySelectorAll('.katex-error').length,
       katexCount: document.querySelectorAll('.katex').length,
-      imageCount: document.querySelectorAll('.markmap image, .markmap img').length,
+      imageCount: document.querySelectorAll('.mind-master-render image, .mind-master-render img, .balanced-layout img').length,
+      connectorCount: document.querySelectorAll('.balanced-live-connectors path').length,
       svgWidth: box ? Math.round(box.width) : 0,
       svgHeight: box ? Math.round(box.height) : 0,
       textLength: document.body.innerText.length
@@ -364,7 +520,16 @@ const timeout = Number(process.argv[3] || 60000);
     if completed.returncode != 0:
         return {"passed": False, "error": completed.stderr.strip() or completed.stdout.strip()}
     data = json.loads(completed.stdout.strip().splitlines()[-1])
-    data["passed"] = data["katexErrors"] == 0 and data["svgWidth"] > 0 and data["svgHeight"] > 0 and not data["pageErrors"]
+    connector_ok = data.get("layoutMode") != "balanced_two_sided" or data.get("connectorCount", 0) > 0
+    data["passed"] = (
+        data["katexErrors"] == 0
+        and data["svgWidth"] > 0
+        and data["svgHeight"] > 0
+        and connector_ok
+        and not data["pageErrors"]
+    )
+    if not connector_ok:
+        data["reason"] = "balanced_two_sided layout requires visible connector paths."
     return data
 
 
@@ -417,6 +582,11 @@ def main(argv: list[str] | None = None) -> int:
         checks["math_delimiter_checks"] = check_math_delimiters(root, markdown)
         checks["image_decisions"] = check_image_decisions(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
         checks["rendered_images"] = check_rendered_images(markdown, ctx["exports"])
+        checks["layout_profile_checks"] = check_layout_profile(mindmap, root)
+        checks["layout_readability"] = check_layout_readability(mindmap, ctx)
+        if checks["layout_readability"].get("skipped"):
+            warnings.append("Layout readability export ratio check skipped because PNG/SVG exports are not present yet.")
+        checks["source_fidelity"] = check_source_fidelity(checks)
         if args.skip_browser:
             checks["browser"] = {"passed": True, "skipped": True}
             warnings.append("Browser validation skipped by --skip-browser.")

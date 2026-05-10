@@ -65,6 +65,42 @@ Nodes may include `type`, `description`, `summary`, `source_quote`, `table`, `eq
 8. Preserve the final hierarchy in `mindmap.md`; the HTML must render that Markdown with Markmap.
 9. Do not use manual x/y coordinates for the main map. Layout belongs to Markmap and browser export.
 
+## Layout Profile and Density Rules
+
+Before rendering, read `layout_profile` from `outline.json` or generate it from the final tree. The layout profile must be copied into `mindmap.json`.
+
+Weighting:
+
+- ordinary node = 1
+- leaf node = 1
+- `table` node = 3
+- `formula` node = 2
+- `image` node or embedded source image = 3
+
+Use `vertical` when total node count is `<= 18` and image count is `<= 2`.
+
+Use `balanced_two_sided` when any of these conditions is true:
+
+- total node count `> 24`
+- any first-level branch weight `> 12`
+- image count `>= 4`
+- table count `>= 1` and leaf node count `> 16`
+- estimated vertical height exceeds `1.4x` the configured canvas height
+
+Use `compact_radial` only for medium-density maps that are too full for a simple vertical chain but do not trigger the two-sided thresholds.
+
+When `mode = balanced_two_sided`:
+
+- keep the root visually centered;
+- assign first-level branches left/right by subtree weight so both sides are as balanced as practical;
+- place the largest and second-largest first-level branches on opposite sides;
+- distribute cards around the root so the exported PNG/PDF reads as a horizontal mind map, not as two uneven columns;
+- render visible connector curves from the root to first-level branches and from branch hubs to their child clusters;
+- keep every H3 and lower descendant under the same H2 on that H2 side;
+- keep images with their related node;
+- keep table nodes intact; they may render wider or scroll horizontally, but rows and columns must not be split;
+- do not drop source-backed nodes, tables, formulas, or image decisions to improve aesthetics.
+
 ## Word Conversion Rendering
 
 When the source is a Word/PDF course note:
@@ -117,4 +153,4 @@ When rendering fails:
 - missing style: verify `manifest.json` and selected `executor-<style>.md`;
 - broken image: remove or fix the asset path, then update `assets/images/index.json`;
 - KaTeX failure: keep the formula in text and mark it unresolved if needed;
-- overcrowded map: reduce low-value image inclusions before dropping content.
+- overcrowded map: switch to `balanced_two_sided`, crop/reflow images, or widen tables before dropping content.

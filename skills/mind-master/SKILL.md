@@ -453,6 +453,7 @@ Outputs:
 
 - `projects/<project_name>/intermediate/mindmap.json`
 - `projects/<project_name>/intermediate/mindmap.md`
+- `projects/<project_name>/intermediate/layout_self_check.md`
 - `projects/<project_name>/exports/<project_name>.html`
 
 Checkpoint:
@@ -462,6 +463,7 @@ GATE 6 ✅ Mind map rendered.
 Deliverables:
 - mindmap json: projects/<project_name>/intermediate/mindmap.json
 - mindmap markdown: projects/<project_name>/intermediate/mindmap.md
+- layout self-check: projects/<project_name>/intermediate/layout_self_check.md
 - html: projects/<project_name>/exports/<project_name>.html
 Confirm to continue to Step 7.
 ```
@@ -497,6 +499,9 @@ Checks:
 - node word limits are respected
 - H2/H3 coverage is complete through `coverage_report`
 - every source table, display formula, and active-section image has an explicit disposition
+- `layout_profile` has a legal mode, density score, and complete first-level branch weights
+- exported PNG/SVG aspect ratio is not an extreme vertical strip when exports exist
+- `source_fidelity` remains complete after layout switching
 
 Checkpoint:
 

@@ -29,6 +29,26 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Branch visual weight should reflect subtree size and importance. Use child count multiplied by a weighting factor to size or allocate space, instead of forcing every first-level branch to be equal.
 - Route connectors around nodes. A connector must not cross through another node when a clear route exists.
 
+## Adaptive Layout
+
+Classic maps must honor the shared `layout_profile` rules:
+
+- small maps stay `vertical`;
+- dense maps switch to `balanced_two_sided`;
+- medium maps may use `compact_radial` if no two-sided threshold is reached.
+
+For density scoring:
+
+- ordinary node = 1
+- leaf node = 1
+- `table` node = 3
+- `formula` node = 2
+- `image` node or embedded source image = 3
+
+Trigger `balanced_two_sided` when total nodes exceed 24, any first-level branch weight exceeds 12, source image count is at least 4, any table exists with more than 16 leaf nodes, or estimated vertical height exceeds 1.4 times canvas height.
+
+In `balanced_two_sided`, place the root in the center and distribute first-level branches left/right by weight. The largest and second-largest first-level branches must be on opposite sides. Render connector curves so the result remains a mind map rather than a card dashboard. Use branch hubs plus child clusters to keep visual mass distributed around the center. Do not split H3 descendants away from their H2 parent, and do not split tables or move images away from their related node.
+
 ## Content Rules
 
 - Level 1 labels: <= 12 Chinese characters.
@@ -42,7 +62,7 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 
 If classic output feels crowded:
 
-1. Reduce first-level branches to the strongest 5 or 6.
-2. Convert minor leaves into `description` or `notes`; use `summary` only for explicit source synthesis.
-3. Remove decorative images.
-4. Keep formulas even if images are removed.
+1. Generate or correct `layout_profile` and switch to `balanced_two_sided` when thresholds are met.
+2. Convert minor leaves into `description` or `notes` only when source fidelity remains traceable.
+3. Crop, enlarge, or reflow core instructional images before considering redraw or omission.
+4. Keep formulas and source tables even if the layout must become wider.

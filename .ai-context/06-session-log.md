@@ -20,6 +20,30 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 针对用户指出的 PDF 跨页和连接线断开问题做修正：连接线从静态百分比路径改为浏览器按真实 DOM 位置动态计算；PDF 导出从 Chromium 打印页改为高分辨率 PNG 生成单页 PDF。重新生成 `lesson_05` 并验证通过，`export.json` 记录 `pdf_mode=single_page_png_pdf`、PNG 4400x2412、SVG 2200x1120，`validation.json` 记录 `connectorCount=11`、7 张图、2 个 KaTeX 节点。
+**进行中 / In progress**: 最新第 5 节导出位于 `projects/ml_theory2_test/maps/lesson_05/exports/`；本地预览服务仍可用于查看。
+**下一步建议 / Next**: 如果用户希望更像参考图，可继续优化连接线层级和分支分布：增加分支图标、粗细渐变、关键词带，以及将源图可选压缩/裁剪成更小的教学图块。
+**注意 / Watch out**: 单页 PDF 是 PNG 栅格化 PDF，优势是不会分页且视觉稳定；若后续需要可复制文本的矢量 PDF，需要再做打印 CSS 的单页 page-size 修复。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 根据用户反馈继续优化第 5 节导图视觉形式：将双栏卡片改为横向中心放射式布局，新增根节点到分支、分支到子卡片的 SVG 连接曲线；叶子节点改成紧凑列表，图片缩略图缩小，Batch 子内容用网格围绕 Batch 枢纽分布。重新生成并导出 `lesson_05`，验证通过：SVG 2200x1120，PNG 高宽比约 0.55，`connectorCount=12`，7 张图和 KaTeX 均通过。
+**进行中 / In progress**: 本地预览服务仍在 `http://127.0.0.1:8765/maps/lesson_05/exports/lesson_05.png`；浏览器对带缓存参数的 PNG URL 报 `ERR_BLOCKED_BY_CLIENT`，但原始 URL 本地 HTTP 返回 200，用户手动刷新即可看新版。
+**下一步建议 / Next**: 用户查看新版后，继续按参考图微调分支曲线粗细、中心卡片尺寸、图片缩略图取舍或是否增加“关键词/调参启示”类源内节点。
+**注意 / Watch out**: 仍需避免新增源文档不存在的章节；当前输出没有凭空添加 5.4/5.5，保留原 H2/H3、表格、公式和图片决策。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 按用户要求重新生成第 5 节导图：运行 `render_mindmap.py`、`export_mindmap.py`、`batch_validate.py`，产物更新到 `projects/ml_theory2_test/maps/lesson_05/`；验证通过并在本地 HTTP 预览中确认 `balanced_two_sided` 页面结构。
+**进行中 / In progress**: 本地预览服务运行在 `http://127.0.0.1:8765/maps/lesson_05/exports/lesson_05.html`，进程 PID 49784；该服务只用于查看静态导出。
+**下一步建议 / Next**: 用户查看第 5 节效果后，根据反馈微调双侧布局密度、图片大小或表格宽度。
+**注意 / Watch out**: 回归产物位于 ignored 的 `projects/ml_theory2_test/maps/lesson_05/`；代码和 reference 改动仍未提交。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 为 Mind-Master 增加 `layout_profile` 自适应布局能力：更新格式/Executor/Image Policy references；`render_mindmap.py` 可生成密度画像、分支权重和 `layout_self_check.md`，密集内容切换为双侧语义 HTML；`export_mindmap.py` 兼容双侧布局导出；`batch_validate.py` 新增 layout profile、长宽比、左右权重和 source fidelity 检查。用 `lesson_05` 重跑 Step 6-8，触发 `balanced_two_sided`，PNG 比例 0.91、SVG 比例 1.2，7 张图、表 5-1、公式 5-1、H2/H3 覆盖均通过。
+**进行中 / In progress**: 回归产物仍在 ignored 的 `projects/ml_theory2_test/maps/lesson_05/`；主代码和 reference 文件有未提交改动，等待用户确认或后续提交。
+**下一步建议 / Next**: 用同一自适应链路重跑 `lesson_06`，观察多公式/多图章节是否需要调阈值或表格宽度策略；继续把 source-faithful outline 生成自动化。
+**注意 / Watch out**: 双侧模式用 HTML 语义布局解决 Markmap 难控左右分布的问题，但主数据仍是 `mindmap.json`/`mindmap.md`；浏览器截图工具对当前大页面截图超时，脚本级 Playwright 导出和 browser validation 已通过。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 实现正式 Markmap 渲染闭环：新增 `render_mindmap.py`、`batch_validate.py`、`export_mindmap.py` 和 `templates/markmap.html`；更新 Skill、README 与 references，加入 `coverage_report`、`source_span`、`figure_decisions`、Markmap 主输出和逐图决策规则。用 `lesson_05` 回归跑通 Step 6-8，生成 HTML/SVG/PNG/PDF。
 **进行中 / In progress**: `projects/ml_theory2_test/maps/lesson_05/` 为 ignored 回归产物；其中 outline 已手工改成 source-faithful 版本，用于证明新脚本链路。
 **下一步建议 / Next**: 把 source-faithful outline 生成策略继续脚本化或半自动化，再用第 6 节验证多公式/多表格/多图片场景。
