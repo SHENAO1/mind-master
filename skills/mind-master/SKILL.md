@@ -45,9 +45,10 @@ DOCX/PDF
 7. Keep equations editable. Equations must remain LaTeX text in HTML and render through KaTeX. Do not rasterize formulas into images.
 8. OCR informs image relevance only. Do not rewrite node text from OCR.
 9. Output filtering hard constraints must land in three layers: reference docs, executor/render behavior, and validation checks. If any layer is missing, the constraint is not implemented.
-10. Mind maps are text-first. Source figures normalize to `preserve`, `crop_preserve`, `redraw:<template_id>`, or `omit`; `omit` is the default. Screenshots/slides/photos must not be directly embedded through `<img>` as raw originals; use `crop_preserve` only for source-faithful learning evidence, and use redraw only through a registered SVG template.
+10. Mind maps are text-first. Source figures normalize to `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`; `omit` is the default. Screenshots/slides/photos must not be directly embedded through `<img>` as raw originals; use `preserve_crop` only for source-faithful learning evidence, and use redraw only through a registered SVG template.
 11. GPT Image 2 inspired layouts are allowed only as a visual organization profile. They must keep source headings, source numbering, `source_quote` / `source_span`, tables, formulas, and figure decisions intact.
 12. Never invent section numbers for derived nodes. Keywords, learning hints, or tuning implications must be titled with `[*]` and marked with `derived_from_summary` or `grounded_hint`; they must not become fake sections such as `5.4` or `5.5`.
+13. Every retained or redrawn figure must include 1 to 2 `callouts`, each with a short conclusion and a `source_quote` found in the active source.
 
 ## Required References
 
@@ -61,7 +62,7 @@ Read only what the current stage needs, except Step 6 where batch preread is req
 - `references/executor-org.md`: org or hierarchy style
 - `references/mindmap-formats.md`: JSON, Markdown, HTML, SVG, PNG, PDF contracts
 - `references/math-rendering.md`: OMML, LaTeX, MathML, KaTeX rules
-- `references/image-policy.md`: image selection, screenshots, crop-preserve, alt, copyright, readability
+- `references/image-policy.md`: image selection, screenshots, preserve/crop/redraw policy, callouts, copyright, readability
 
 ## Project Path Contract
 
@@ -384,11 +385,11 @@ Role: image curator and screenshot operator.
 Before selecting images:
 
 1. Read `assets/images/index.json`.
-2. Normalize every figure to one of `preserve`, `crop_preserve`, `redraw:<template_id>`, or `omit`; default to `omit`.
-3. Use `preserve` only for source-backed data charts or irreducible visual evidence classified as `type: "data_chart"`, `is_data_chart: true`, and `redraw_required: false`.
-4. Use `crop_preserve` when the original figure is useful but too large or slide-like; crop the source image to the evidence region and keep provenance in `crop_source_id`, `crop_box`, and `crop_path`.
-5. Use `redraw:<template_id>` only when `assets/svg_templates/<template_id>.svg` exists. Missing templates must downgrade to `omit`.
-6. Do not set legacy `decision: "image"` for screenshots, slides, or photos unless the renderer can normalize it to `crop_preserve`, `redraw:<template_id>`, or `omit`.
+2. Normalize every figure to one of `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`; default to `omit`.
+3. Use `preserve_full` only when the full original is clear and all of it is evidence.
+4. Use `preserve_crop` when the original figure is useful but needs white-space/title/noise removal; keep provenance in `crop_source_id`, `crop_box`, `crop_focus`, and `crop_path`.
+5. Use `redraw_high_fidelity` when the original must be structurally preserved but is unreadable at map size; use `redraw_concept` only when a simplified concept sketch is enough. Missing templates must downgrade to `omit`.
+6. Do not set legacy `decision: "image"` for screenshots, slides, or photos unless the renderer can normalize it to `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`.
 
 Before external URL screenshots:
 
@@ -519,7 +520,8 @@ Checks:
 - source H2/H3 section numbers are visible in rendered node titles and `section_id` metadata
 - every source table, display formula, and active-section image has an explicit disposition
 - no rendered node introduces a source-style section number absent from the active source
-- figure decisions use only `preserve`, `crop_preserve`, `redraw`, or `omit`
+- figure decisions use only `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`
+- retained/redrawn images meet readability thresholds and carry grounded callouts
 - keywords nodes render as capsule terms when source terms support them
 - summary details are complete source-backed sentences, not noun phrases
 - H3 nodes carry at least four details or are merged before render

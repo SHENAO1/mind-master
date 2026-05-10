@@ -26,6 +26,22 @@
 
 ---
 
+## 2026-05-10 · 学习型导图五类图片策略与可读性校验
+
+**背景**: 第 5 节最新回归显示图片已经能嵌入节点，但整图缩小后教学价值不足；学习型导图需要判断图片是否该全图保留、裁剪、结构化高保真重绘、概念化重绘或省略，并在最终 PNG/PDF 中验证图像确实可读。
+
+**选项**:
+- A: 沿用 `preserve` / `crop_preserve` / `redraw` / `omit` 四分法，仅通过人工调整图片大小改善阅读。
+- B: 升级为 `preserve_full` / `preserve_crop` / `redraw_high_fidelity` / `redraw_concept` / `omit` 五分法，同时要求每张保留或重绘图有 source-backed callout、crop metadata 和最终渲染尺寸校验。
+
+**决策**: 选择 B。
+
+**理由**: 五分法能区分“整图证据”“裁剪证据”“必须保留结构的重绘”和“只需概念示意”的不同学习用途；callout 与浏览器实测尺寸校验可以防止图片只是缩小塞进卡片而不可读。
+
+**影响**: 更新 `SKILL.md`、Strategist/Executor/Image/Format references、`extract_assets.py`、`render_mindmap.py`、`batch_validate.py`、`templates/markmap.html` 与回归测试。`lesson_05` 最新决策为 `fig_p38_004=preserve_full`、`fig_p46_006/fig_p56_007/fig_p63_008=preserve_crop`、`fig_p32_003=redraw_high_fidelity`、`fig_p23_002/fig_p43_005=omit`；新增 `forbidden_section_numbers`、`image_readability`、`crop_metadata`、`image_callout_grounding` 校验。
+
+**状态**: 生效
+
 ## 2026-05-10 · GPT Image 2 inspired source-faithful profile 与四分图像策略
 
 **背景**: 第 5 节复盘确认 GPT Image 2 参考导图在中心锚点、左右分支、编号列表和视觉记忆点上更清晰，但参考图引入了原文不存在的 `5.2.3`、`5.4`、`5.5` 等章节编号。此前三分法也无法表达“原图有价值但应裁剪重点区域后嵌入”的学习导图需求。
@@ -40,7 +56,7 @@
 
 **影响**: 更新 `SKILL.md`、Strategist/Executor/Image/Format references、`extract_assets.py`、`render_mindmap.py`、`batch_validate.py`、`templates/markmap.html` 与回归测试。`lesson_05` 使用 Batch 左侧、Momentum/小结右侧、关键词底部胶囊条，图像决策为 1 preserve、3 crop_preserve、1 redraw、2 omit。
 
-**状态**: 生效
+**状态**: 已推翻(见 2026-05-10 · 学习型导图五类图片策略与可读性校验)
 
 ## 2026-05-10 · 图像策略改为 preserve/redraw/omit 三分法
 

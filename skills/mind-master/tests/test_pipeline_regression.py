@@ -239,10 +239,43 @@ Momentum 通过引入历史方向，为训练过程增添惯性。
             "omitted": [],
         },
         "figure_decisions": [
-            {"source_id": "data_fig", "source_path": "assets/images/data_curve.png", "decision": "image", "node_id": "n_batch_def", "node_path": "root > Batch > Batch定义", "alt": "Batch Size 时间数据图", "reason": "真实数据图"},
+            {
+                "source_id": "data_fig",
+                "source_path": "assets/images/data_curve.png",
+                "decision": "image",
+                "node_id": "n_batch_def",
+                "node_path": "root > Batch > Batch定义",
+                "alt": "Batch Size 时间数据图",
+                "reason": "真实数据图",
+                "callouts": [
+                    {"text": "大 Batch 缩短 Epoch 时间", "source_quote": "较大的 Batch Size 借助 GPU 平行计算可以缩短一个 Epoch 的训练时间"}
+                ],
+            },
             {"source_id": "slide_fig", "source_path": "assets/images/slide_screen.png", "decision": "image", "node_id": "n_batch_def", "node_path": "root > Batch > Batch定义", "alt": "课程截图", "reason": "测试截图默认 omit"},
-            {"source_id": "concept_fig", "source_path": "assets/images/sharp_flat.png", "decision": "image", "node_id": "n_batch_effect", "node_path": "root > Batch > Batch作用", "alt": "Sharp vs Flat Minima", "reason": "测试注册模板 redraw"},
-            {"source_id": "momentum_fig", "source_path": "assets/images/momentum_ball.png", "decision": "image", "node_id": "n_momentum_concept", "node_path": "root > Momentum > Momentum概念", "alt": "Momentum 物理惯性类比", "reason": "测试 crop_preserve"},
+            {
+                "source_id": "concept_fig",
+                "source_path": "assets/images/sharp_flat.png",
+                "decision": "image",
+                "node_id": "n_batch_effect",
+                "node_path": "root > Batch > Batch作用",
+                "alt": "Sharp vs Flat Minima",
+                "reason": "测试注册模板 redraw",
+                "callouts": [
+                    {"text": "Flat Minima 有利泛化", "source_quote": "Flat Minima 比 Sharp Minima 更有利于泛化"}
+                ],
+            },
+            {
+                "source_id": "momentum_fig",
+                "source_path": "assets/images/momentum_ball.png",
+                "decision": "image",
+                "node_id": "n_momentum_concept",
+                "node_path": "root > Momentum > Momentum概念",
+                "alt": "Momentum 物理惯性类比",
+                "reason": "测试 crop_preserve",
+                "callouts": [
+                    {"text": "惯性越过洼地", "source_quote": "物理类比是小球滚下斜坡时会借助惯性越过洼地"}
+                ],
+            },
         ],
     }
     write_json(map_intermediate / "outline.json", outline)
@@ -318,15 +351,15 @@ class PipelineRegressionTests(unittest.TestCase):
 
     def test_figure_triage(self):
         decisions = {item["source_id"]: item["decision"] for item in self.mindmap["figure_decisions"]}
-        self.assertEqual(decisions["data_fig"], "preserve")
+        self.assertEqual(decisions["data_fig"], "preserve_full")
         self.assertEqual(decisions["slide_fig"], "omit")
-        self.assertEqual(decisions["concept_fig"], "redraw")
-        self.assertEqual(decisions["momentum_fig"], "crop_preserve")
+        self.assertEqual(decisions["concept_fig"], "redraw_concept")
+        self.assertEqual(decisions["momentum_fig"], "preserve_crop")
 
     def test_crop_preserve_creates_provenance_file(self):
         crops = [
             item for item in self.mindmap["figure_decisions"]
-            if item.get("decision") == "crop_preserve"
+            if item.get("decision") == "preserve_crop"
         ]
         self.assertTrue(crops)
         for item in crops:
@@ -335,7 +368,12 @@ class PipelineRegressionTests(unittest.TestCase):
             self.assertEqual(item.get("crop_source_id"), item["source_id"])
 
     def test_no_extra_section_numbers(self):
-        self.assertTrue(self.validation["checks"]["no_extra_section_numbers"]["passed"])
+        self.assertTrue(self.validation["checks"]["forbidden_section_numbers"]["passed"])
+
+    def test_image_learning_checks(self):
+        self.assertTrue(self.validation["checks"]["image_readability"]["passed"])
+        self.assertTrue(self.validation["checks"]["crop_metadata"]["passed"])
+        self.assertTrue(self.validation["checks"]["image_callout_grounding"]["passed"])
 
     def test_auto_density_stays_inside_source_span(self):
         source_lines = (self.project / "intermediate" / "sections" / "lesson_05.md").read_text(encoding="utf-8").splitlines()

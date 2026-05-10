@@ -20,6 +20,12 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 将 Mind-Master 升级为学习型导图图片策略：Skill/reference/scripts/tests 统一到 `preserve_full` / `preserve_crop` / `redraw_high_fidelity` / `redraw_concept` / `omit` 五类；保留/重绘图新增 source-backed callout，裁剪图新增 `crop_focus`/`crop_reason`，验证器新增 `forbidden_section_numbers`、`image_readability`、`crop_metadata`、`image_callout_grounding`。同时收紧 `source_faithful_poster`/GPT Image 2 inspired 双侧布局，图片学习卡横跨子网格并降低连接线视觉重量。
+**进行中 / In progress**: 已重新抽取素材、渲染、导出并验证 `projects/ml_theory2_test/maps/lesson_05`；HTML/SVG/PNG/PDF 均已生成，`batch_validate.py` 通过。最终图片决策：`fig_p38_004=preserve_full`，`fig_p46_006/fig_p56_007/fig_p63_008=preserve_crop`，`fig_p32_003=redraw_high_fidelity`，`fig_p23_002/fig_p43_005=omit`。
+**下一步建议 / Next**: 将同一五类图片策略应用到第 6-8 节；继续把 outline 生成产品化，减少手工 outline 维护，并扩展更多高保真 redraw template。
+**注意 / Watch out**: 新策略已推翻上一轮四分法命名；旧 `preserve` / `crop_preserve` / `redraw` 只能作为兼容输入，最终输出和校验必须使用五类决策。生成产物仍在 ignored 的 `projects/ml_theory2_test/`。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 实现 “GPT Image 2 inspired but source-faithful” Mind-Master profile：Skill/reference 同步四分图像策略 `preserve` / `crop_preserve` / `redraw` / `omit`，渲染器新增裁剪派生产物，验证器新增伪章节编号白名单和 figure decision value 检查，自动密度补抽改为只使用所属 `source_span` 且不硬截断英文词。
 **进行中 / In progress**: 已重新生成 `projects/ml_theory2_test/maps/lesson_05` 并导出 HTML/SVG/PNG/PDF；`batch_validate.py` 完整通过，浏览器检查 `katexErrors=0`、`imageCount=4`、`connectorCount=11`。图片决策为 `fig_p38_004=preserve`，`fig_p46_006/fig_p56_007/fig_p63_008=crop_preserve`，`fig_p32_003=redraw`，`fig_p23_002/fig_p43_005=omit`。
 **下一步建议 / Next**: 用同一 profile 回归第 6-8 节；如需更高图片可读性，可为每类教学截图补充更精细的 per-figure `crop_box` 或注册 SVG 模板。

@@ -66,7 +66,7 @@ For `type: "keywords"`, render `terms` as a horizontal capsule strip. For `type:
 7. Ensure the HTML can be opened offline.
 8. Preserve the final hierarchy in `mindmap.md`; the HTML must render that Markdown with Markmap.
 9. Do not use manual x/y coordinates for the main map. Layout belongs to Markmap and browser export.
-10. Do not directly embed raw assets whose `type` is `screenshot`, `slide`, or `photo`, or whose `redraw_required` is true. Normalize figure decisions to `preserve`, `crop_preserve`, `redraw:<template_id>`, or `omit`; `crop_preserve` must write a cropped derivative with provenance, redraw may render only a registered SVG template, and missing templates must downgrade to `omit`.
+10. Do not directly embed raw assets whose `type` is `screenshot`, `slide`, or `photo`, or whose `redraw_required` is true. Normalize figure decisions to `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`; `preserve_crop` must write a cropped derivative with provenance and focus metadata, redraw may render only a registered SVG/HTML template, and missing templates must downgrade to `omit`.
 
 ## Layout Profile and Density Rules
 
@@ -100,9 +100,9 @@ When `mode = balanced_two_sided`:
 - place the largest and second-largest first-level branches on opposite sides;
 - preserve explicit side intent when the source or outline marks it, such as Batch on the left and Momentum plus summary on the right;
 - distribute cards around the root so the exported PNG/PDF reads as a horizontal mind map, not as two uneven columns;
-- render visible connector curves from the root to first-level branches and from branch hubs to their child clusters;
+- render visible connector curves from the root to first-level branches and from branch hubs to their child clusters, but keep connector stroke and opacity visually lighter than content cards;
 - keep every H3 and lower descendant under the same H2 on that H2 side;
-- keep images with their related node;
+- keep images with their related node and pair each retained/redrawn image with 1 to 2 source-backed callouts;
 - keep table nodes intact; they may render wider or scroll horizontally, but rows and columns must not be split;
 - do not drop source-backed nodes, tables, formulas, or image decisions to improve aesthetics.
 - render `type: "keywords"` nodes whose title starts with `[*]` as a bottom capsule strip, not as fake numbered branches.
@@ -118,7 +118,10 @@ When the source is a Word/PDF course note:
 - If a single detail bullet repeats the node description, render only the more specific version.
 - H3 heading nodes should render 4 to 6 source-backed details. If source text cannot support that density, merge the H3 into its parent or nearest sibling before rendering.
 - Keep source tables as Markdown tables under the owning node.
-- Keep figure decisions near the node selected by `figure_decisions`; screenshot-like figures render only as `crop_preserve` derivatives, registered-template redraws, or are omitted with text density fallback.
+- Keep figure decisions near the node selected by `figure_decisions`; screenshot-like figures render only as `preserve_crop` derivatives, registered high-fidelity/concept redraws, or are omitted with text density fallback.
+- Size learning images by decision: dense charts and formula/axis/arrow images need larger minimum render dimensions than simple concept redraws.
+- For `preserve_crop`, crop before layout so the final card contains the evidence region plus its callouts, not a tiny full-page screenshot.
+- If no grounded callout can be found for a retained or redrawn figure, downgrade it to `omit`.
 - Carry `coverage_report` and `figure_decisions` from `outline.json` into `mindmap.json`.
 
 ## Auto Density Guardrails

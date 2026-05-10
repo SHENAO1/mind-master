@@ -138,20 +138,21 @@ def looks_like_real_data_chart(text: str) -> bool:
 
 def decision_hint_for_asset(asset_type: str, is_data_chart: bool, context: str) -> tuple[str, str, str]:
     if asset_type == "data_chart" and is_data_chart and looks_like_real_data_chart(context):
-        return "preserve", "", "contains source-backed experimental data trend and concrete numeric ranges"
+        return "preserve_full", "", "contains source-backed experimental data trend and concrete numeric ranges"
 
     if re.search(r"(图\s*5-5|sharp minima\s*与\s*flat minima\s*对比图)", context, re.I):
-        return "crop_preserve", "", "source figure is compact evidence for Flat Minima vs Sharp Minima"
+        return "preserve_crop", "", "source figure is compact evidence for Flat Minima vs Sharp Minima"
 
     if re.search(r"(Momentum物理类比|物理学类比|球从斜坡滚下|惯性)", context, re.I):
-        return "crop_preserve", "", "source figure is the visual memory anchor for Momentum inertia"
+        return "preserve_crop", "", "source figure is the visual memory anchor for Momentum inertia"
 
     if re.search(r"(图\s*5-7|历史方向|前一次的更新方向|Movement not just based on gradient)", context, re.I):
-        return "crop_preserve", "", "source figure shows the recursive historical direction update"
+        return "preserve_crop", "", "source figure shows the recursive historical direction update"
 
     template_id = match_svg_template(context)
     if template_id:
-        return f"redraw:{template_id}", template_id, "matches a registered SVG concept template"
+        fidelity = "redraw_high_fidelity" if template_id == "batch_size_update_comparison" else "redraw_concept"
+        return fidelity, template_id, "matches a registered SVG concept template"
 
     return "omit", "", "default omit: not a readable data chart and no registered redraw template matched"
 
@@ -206,14 +207,14 @@ def classify_asset(item: dict[str, Any], project_path: Path, source_text: str = 
         asset_type = "data_chart"
 
     decision_hint, template_id, decision_hint_reason = decision_hint_for_asset(asset_type, bool(is_data_chart), text_blob)
-    redraw_required = decision_hint.startswith("redraw:")
+    redraw_required = decision_hint.startswith("redraw")
 
     enriched["type"] = asset_type
     enriched["is_data_chart"] = bool(is_data_chart or asset_type == "data_chart")
     enriched["redraw_required"] = redraw_required
     enriched["decision_hint"] = decision_hint
     enriched["decision_hint_reason"] = decision_hint_reason
-    if decision_hint == "crop_preserve":
+    if decision_hint == "preserve_crop":
         if "crop_box" not in enriched:
             source_id = str(enriched.get("id") or "")
             crop_boxes = {
@@ -223,9 +224,13 @@ def classify_asset(item: dict[str, Any], project_path: Path, source_text: str = 
             }
             if source_id in crop_boxes:
                 enriched["crop_box"] = crop_boxes[source_id]
+        enriched.setdefault("crop_focus", decision_hint_reason)
+        enriched.setdefault("crop_reason", decision_hint_reason)
         enriched.pop("redraw_template_id", None)
     elif template_id:
         enriched["redraw_template_id"] = template_id
+        if decision_hint == "redraw_high_fidelity":
+            enriched["redraw_fidelity"] = "high"
     else:
         enriched.pop("redraw_template_id", None)
     if context:
@@ -284,16 +289,16 @@ def main(argv: list[str] | None = None) -> int:
 
     index_path = project_path / "assets" / "images" / "index.json"
     write_json(index_path, index)
-    preserve_count = sum(1 for item in index if item.get("decision_hint") == "preserve")
-    crop_count = sum(1 for item in index if item.get("decision_hint") == "crop_preserve")
-    redraw_count = sum(1 for item in index if str(item.get("decision_hint", "")).startswith("redraw:"))
+    preserve_count = sum(1 for item in index if item.get("decision_hint") == "preserve_full")
+    crop_count = sum(1 for item in index if item.get("decision_hint") == "preserve_crop")
+    redraw_count = sum(1 for item in index if str(item.get("decision_hint", "")).startswith("redraw"))
     omit_count = sum(1 for item in index if item.get("decision_hint") == "omit")
     print("GATE 3 ✅ Assets extracted.")
     print("Deliverables:")
     print(f"- image index: {index_path}")
     print(f"- images indexed: {len(index)}")
-    print(f"- preserve hints: {preserve_count}")
-    print(f"- crop_preserve hints: {crop_count}")
+    print(f"- preserve_full hints: {preserve_count}")
+    print(f"- preserve_crop hints: {crop_count}")
     print(f"- redraw_required: {redraw_count}")
     print(f"- omit hints: {omit_count}")
     return 0

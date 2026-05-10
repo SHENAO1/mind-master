@@ -36,7 +36,8 @@ INLINE_MATH_RE = re.compile(r"(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)", re.S)
 LATEX_LIKE_RE = re.compile(r"(?:_\{|[\^]\{|\\(?:frac|sum|nabla|theta|lambda|eta|sigma|alpha|beta|gamma|mu|Sigma)\b)")
 LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
 SCREENSHOT_EMBED_BLOCK_TYPES = {"screenshot", "slide", "photo"}
-ALLOWED_FIGURE_DECISIONS = {"preserve", "crop_preserve", "redraw", "omit"}
+ALLOWED_FIGURE_DECISIONS = {"preserve_full", "preserve_crop", "redraw_high_fidelity", "redraw_concept", "omit"}
+LEGACY_FIGURE_DECISIONS = {"preserve", "crop_preserve", "redraw"}
 SVG_BLOCK_RE = re.compile(r"<svg\b[^>]*>(.*?)</svg>", re.I | re.S)
 SVG_PATH_D_RE = re.compile(r"<path\b[^>]*\bd=[\"']([^\"']+)[\"']", re.I)
 SVG_COMMAND_RE = re.compile(r"[A-Za-z]")
@@ -266,7 +267,7 @@ def check_section_numbering(source_text: str, root: dict[str, Any]) -> dict[str,
     }
 
 
-def check_no_extra_section_numbers(source_text: str, root: dict[str, Any]) -> dict[str, Any]:
+def check_forbidden_section_numbers(source_text: str, root: dict[str, Any]) -> dict[str, Any]:
     allowed = {
         section_id
         for heading in source_headings(source_text)
@@ -282,6 +283,10 @@ def check_no_extra_section_numbers(source_text: str, root: dict[str, Any]) -> di
             if candidate not in allowed:
                 extras.append({"id": node.get("id"), "title": title, "section_id": candidate})
     return {"passed": not extras, "allowed": sorted(allowed), "extra": extras}
+
+
+def check_no_extra_section_numbers(source_text: str, root: dict[str, Any]) -> dict[str, Any]:
+    return check_forbidden_section_numbers(source_text, root)
 
 
 def coverage_entries(outline: dict[str, Any], mindmap: dict[str, Any]) -> list[str]:
@@ -407,7 +412,7 @@ def check_figure_decision_values(outline: dict[str, Any], mindmap: dict[str, Any
         seen.add(key)
         if decision not in ALLOWED_FIGURE_DECISIONS:
             invalid.append({"source_id": source_id, "decision": decision})
-        if decision == "crop_preserve":
+        if decision == "preserve_crop":
             crop_path = str(item.get("crop_path") or "")
             if not crop_path:
                 crop_missing.append({"source_id": source_id, "reason": "crop_path missing"})
@@ -420,9 +425,118 @@ def check_figure_decision_values(outline: dict[str, Any], mindmap: dict[str, Any
     return {
         "passed": not invalid and not crop_missing,
         "allowed": sorted(ALLOWED_FIGURE_DECISIONS),
+        "legacy_disallowed": sorted(LEGACY_FIGURE_DECISIONS),
         "invalid": invalid,
         "crop_missing": crop_missing,
     }
+
+
+def check_crop_metadata(mindmap: dict[str, Any], project_path: Path) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    for item in mindmap.get("figure_decisions", []) or []:
+        if not isinstance(item, dict) or item.get("decision") != "preserve_crop":
+            continue
+        missing = [
+            field
+            for field in ("crop_box", "crop_path", "crop_source_id")
+            if not item.get(field)
+        ]
+        if not (item.get("crop_focus") or item.get("crop_reason")):
+            missing.append("crop_focus_or_reason")
+        crop_path = str(item.get("crop_path") or "")
+        if crop_path:
+            absolute = Path(crop_path)
+            if not absolute.is_absolute():
+                absolute = project_path / absolute
+            if not absolute.exists():
+                missing.append("crop_file")
+        if missing:
+            failures.append({"source_id": item.get("source_id"), "missing": missing})
+    return {"passed": not failures, "failures": failures}
+
+
+def check_image_callout_grounding(mindmap: dict[str, Any], source_text: str) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    checked = 0
+    for item in mindmap.get("figure_decisions", []) or []:
+        if not isinstance(item, dict):
+            continue
+        decision = str(item.get("decision") or "")
+        if decision == "omit":
+            continue
+        callouts = item.get("callouts") or []
+        if not callouts:
+            failures.append({"source_id": item.get("source_id"), "reason": "missing callouts"})
+            continue
+        for callout in callouts[:2]:
+            if not isinstance(callout, dict):
+                failures.append({"source_id": item.get("source_id"), "reason": "invalid callout"})
+                continue
+            quote = str(callout.get("source_quote") or "")
+            text = str(callout.get("text") or "")
+            checked += 1
+            if not quote or not text:
+                failures.append({"source_id": item.get("source_id"), "callout": text, "reason": "missing text or source_quote"})
+            elif source_text and not source_quote_found(quote, source_text):
+                failures.append({"source_id": item.get("source_id"), "callout": text, "source_quote": quote, "reason": "source_quote not found"})
+    return {"passed": not failures, "checked": checked, "failures": failures}
+
+
+def image_dimensions_for_decision(item: dict[str, Any], project_path: Path) -> tuple[int, int] | None:
+    path_text = str(item.get("crop_path") or item.get("source_path") or "")
+    if not path_text:
+        return None
+    path = Path(path_text)
+    absolute = path if path.is_absolute() else project_path / path
+    if not absolute.exists() or Image is None:
+        return None
+    try:
+        with Image.open(absolute) as image:
+            return image.width, image.height
+    except Exception:
+        return None
+
+
+def check_image_readability_static(mindmap: dict[str, Any], project_path: Path) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    checked = 0
+    for item in mindmap.get("figure_decisions", []) or []:
+        if not isinstance(item, dict):
+            continue
+        decision = str(item.get("decision") or "")
+        if decision not in {"preserve_full", "preserve_crop", "redraw_high_fidelity", "redraw_concept"}:
+            continue
+        checked += 1
+        min_width = int(item.get("min_render_width") or 170)
+        min_height = int(item.get("min_render_height") or 96)
+        if decision.startswith("redraw"):
+            continue
+        dimensions = image_dimensions_for_decision(item, project_path)
+        if not dimensions:
+            failures.append({"source_id": item.get("source_id"), "reason": "image dimensions unavailable"})
+            continue
+        width, height = dimensions
+        if width < min_width or height < min_height:
+            failures.append(
+                {
+                    "source_id": item.get("source_id"),
+                    "decision": decision,
+                    "width": width,
+                    "height": height,
+                    "min_width": min_width,
+                    "min_height": min_height,
+                }
+            )
+    return {"passed": not failures, "mode": "static_asset_dimensions", "checked": checked, "failures": failures}
+
+
+def check_image_readability_browser(browser: dict[str, Any]) -> dict[str, Any]:
+    items = browser.get("imageReadability") or []
+    failures = [
+        item for item in items
+        if item.get("width", 0) < item.get("minWidth", 0) or item.get("height", 0) < item.get("minHeight", 0)
+    ]
+    return {"passed": not failures, "mode": "browser_rendered_size", "checked": len(items), "failures": failures}
 
 
 def markdown_images(markdown: str, exports_dir: Path) -> list[dict[str, Any]]:
@@ -465,7 +579,7 @@ def image_asset_kind(asset: dict[str, Any]) -> str:
 
 
 def blocked_embed_asset(asset: dict[str, Any]) -> bool:
-    if str(asset.get("decision_hint") or "") == "preserve" and image_asset_kind(asset) == "data_chart":
+    if str(asset.get("decision_hint") or "") in {"preserve", "preserve_full"} and image_asset_kind(asset) == "data_chart":
         return False
     return image_asset_kind(asset) in SCREENSHOT_EMBED_BLOCK_TYPES or truthy(asset.get("redraw_required"))
 
@@ -696,7 +810,7 @@ def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
     required = [
         "heading_coverage",
         "section_numbering",
-        "no_extra_section_numbers",
+        "forbidden_section_numbers",
         "table_checks",
         "formula_coverage",
         "image_decisions",
@@ -833,6 +947,18 @@ const timeout = Number(process.argv[3] || 60000);
       ? document.querySelector('.balanced-layout')
       : document.querySelector('.markmap svg');
     const box = target ? target.getBoundingClientRect() : null;
+    const imageReadability = Array.from(document.querySelectorAll('[data-image-kind]')).map((figure) => {
+      const media = figure.querySelector('img, svg');
+      const rect = media ? media.getBoundingClientRect() : figure.getBoundingClientRect();
+      return {
+        sourceId: figure.dataset.sourceId || '',
+        kind: figure.dataset.imageKind || '',
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        minWidth: Number(figure.dataset.minWidth || 0),
+        minHeight: Number(figure.dataset.minHeight || 0)
+      };
+    });
     return {
       layoutMode,
       katexErrors: document.querySelectorAll('.katex-error').length,
@@ -841,7 +967,8 @@ const timeout = Number(process.argv[3] || 60000);
       connectorCount: document.querySelectorAll('.balanced-live-connectors path').length,
       svgWidth: box ? Math.round(box.width) : 0,
       svgHeight: box ? Math.round(box.height) : 0,
-      textLength: document.body.innerText.length
+      textLength: document.body.innerText.length,
+      imageReadability
     };
   });
   result.pageErrors = errors;
@@ -930,12 +1057,16 @@ def main(argv: list[str] | None = None) -> int:
 
         checks["heading_coverage"] = check_heading_coverage(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
         checks["section_numbering"] = check_section_numbering(source_text, root) if source_text else {"passed": True, "skipped": True}
-        checks["no_extra_section_numbers"] = check_no_extra_section_numbers(source_text, root) if source_text else {"passed": True, "skipped": True}
+        checks["forbidden_section_numbers"] = check_forbidden_section_numbers(source_text, root) if source_text else {"passed": True, "skipped": True}
+        checks["no_extra_section_numbers"] = checks["forbidden_section_numbers"]
         checks["table_checks"] = check_tables(flat, source_text)
         checks["formula_coverage"] = check_formula_coverage(root, source_text)
         checks["math_delimiter_checks"] = check_math_delimiters(root, markdown)
         checks["image_decisions"] = check_image_decisions(source_text, outline, mindmap) if source_text else {"passed": True, "skipped": True}
         checks["figure_decision_values"] = check_figure_decision_values(outline, mindmap, ctx["project"])
+        checks["crop_metadata"] = check_crop_metadata(mindmap, ctx["project"])
+        checks["image_callout_grounding"] = check_image_callout_grounding(mindmap, source_text)
+        checks["image_readability"] = check_image_readability_static(mindmap, ctx["project"])
         checks["rendered_images"] = check_rendered_images(markdown, ctx["exports"])
         checks["source_image_policy"] = check_source_image_policy(markdown, html_text, outline, mindmap, images_index)
         checks["placeholder_curve_detection"] = check_placeholder_curve_detection(html_text)
@@ -953,6 +1084,8 @@ def main(argv: list[str] | None = None) -> int:
             warnings.append("Browser validation skipped by --skip-browser.")
         else:
             checks["browser"] = check_browser(html_path, args.node, args.browser_timeout_ms)
+            if checks["browser"].get("imageReadability") is not None:
+                checks["image_readability"] = check_image_readability_browser(checks["browser"])
             if (
                 checks["formula_coverage"].get("source_display_formula_count", 0) > 0
                 and not checks["browser"].get("skipped")

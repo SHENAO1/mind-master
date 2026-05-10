@@ -135,7 +135,7 @@ The coverage report records where source content went. It prevents the map from 
 }
 ```
 
-Actions are `node`, `table`, `formula`, `preserve`, `crop_preserve`, `redraw`, or `omit`.
+Actions are `node`, `table`, `formula`, `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`.
 
 ## Figure Decisions
 
@@ -147,11 +147,18 @@ Every image in the active source must receive one explicit decision:
     {
       "source_id": "fig_p38_004",
       "source_path": "assets/images/fig_p38_004.png",
-      "decision": "preserve",
+      "decision": "preserve_full",
       "node_id": "n_batch_speed",
       "node_path": "root > Batch > 效率机制",
       "alt": "不同 Batch Size 下单次更新时间与 Epoch 时间对比",
-      "reason": "核心实验趋势图，文字无法完全替代"
+      "reason": "核心实验趋势图，文字无法完全替代",
+      "callouts": [
+        {
+          "text": "大 Batch 在单个 Epoch 上更快",
+          "source_quote": "在一个 Epoch 中，较大的 Batch Size 反而能缩短训练时间"
+        }
+      ],
+      "readability_tier": "dense"
     }
   ]
 }
@@ -159,17 +166,20 @@ Every image in the active source must receive one explicit decision:
 
 Allowed decisions:
 
-- `preserve`: embed the source image near the relevant node because it is source-backed data or irreducible visual evidence
-- `crop_preserve`: crop a source figure to its evidence-bearing region, save the derivative locally, and embed the crop while preserving provenance
-- `redraw:<template_id>` or `redraw`: recreate through a registered SVG template in `assets/svg_templates/`
+- `preserve_full`: embed the full source image near the relevant node when the whole image is clear source-backed evidence
+- `preserve_crop`: crop a source figure to its evidence-bearing region, save the derivative locally, and embed the crop while preserving provenance
+- `redraw_high_fidelity`: recreate the source structure, key arrows, formulas, labels, and relative relationships when the original is unreadable at map size
+- `redraw_concept`: recreate only the learning concept through a registered SVG template when exact source geometry is not required
 - `omit`: omit because the figure is decorative, duplicated, too blurry, not useful, or lacks a registered redraw template
 
 Screenshot-like assets are not eligible for direct embed:
 
-- If `assets/images/index.json` says `type` is `screenshot`, `slide`, or `photo`, the effective decision must be `crop_preserve`, `redraw`, or `omit` unless the asset is explicitly marked as a real data chart.
-- `preserve` may embed only assets explicitly marked `type: "data_chart"`, `is_data_chart: true`, `redraw_required: false`, or other non-screenshot visual evidence approved by the Strategist.
-- A `crop_preserve` decision must preserve `source_id`, `source_path`, `alt`, `crop_box`, `crop_source_id`, and `crop_path`; coverage action should be `crop_preserve`.
-- A `redraw` decision must preserve `source_id`, `source_path`, `alt`, and `redraw_template_id`; coverage action should be `redraw`.
+- If `assets/images/index.json` says `type` is `screenshot`, `slide`, or `photo`, the effective decision must be `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit` unless the asset is explicitly marked as a real data chart.
+- `preserve_full` may embed only assets explicitly marked `type: "data_chart"`, `is_data_chart: true`, `redraw_required: false`, or other non-screenshot visual evidence approved by the Strategist.
+- A `preserve_crop` decision must preserve `source_id`, `source_path`, `alt`, `crop_box`, `crop_source_id`, `crop_path`, and `crop_focus` or `crop_reason`; coverage action should be `preserve_crop`.
+- A `redraw_high_fidelity` or `redraw_concept` decision must preserve `source_id`, `source_path`, `alt`, `redraw_template_id`, and `redraw_instruction`; coverage action should match the final decision.
+- Every retained or redrawn figure must include 1 to 2 callouts. Each callout has short `text` plus a `source_quote` that appears in the active source.
+- Retained figures must include a readability tier or explicit `min_render_width` / `min_render_height` so validation can prove the final PNG/PDF is readable.
 - Missing redraw templates must downgrade to `omit` before rendering and validation must record the absence.
 
 ## Table Nodes
@@ -339,12 +349,15 @@ PNG default scale: `2`.
 - `table_checks`: table node presence, required fields, and row/column integrity
 - `heading_coverage`: H2/H3 source headings mapped into the mind map
 - `section_numbering`: H2/H3 nodes preserve visible source numbers and parent/child placement
-- `image_decisions`: source images and their `preserve` / `redraw:<template_id>` / `omit` decisions
+- `image_decisions`: source images and their `preserve_full` / `preserve_crop` / `redraw_high_fidelity` / `redraw_concept` / `omit` decisions
 - `layout_profile_checks`: legal layout mode, density score, and first-level branch coverage
 - `layout_readability`: export aspect ratio and balanced side-weight checks
 - `source_fidelity`: H2/H3, table, formula, and figure coverage after layout switching
-- `no_extra_section_numbers`: rendered source-style section IDs must be drawn only from active source headings
-- `figure_decision_values`: all source figures use only `preserve`, `crop_preserve`, `redraw`, or `omit`; crop files exist
+- `forbidden_section_numbers`: rendered source-style section IDs must be drawn only from active source headings
+- `figure_decision_values`: all source figures use only `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`; crop files exist
+- `crop_metadata`: every `preserve_crop` decision has `crop_box`, `crop_path`, and `crop_focus` or `crop_reason`
+- `image_callout_grounding`: every retained or redrawn figure has 1 to 2 callouts backed by source quotes
+- `image_readability`: retained or redrawn images meet their required final render width and height
 - `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
 - `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence

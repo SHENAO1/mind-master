@@ -45,7 +45,7 @@ Write valid JSON:
 1. Preserve the author's argument structure before optimizing layout.
 2. Keep node labels short according to `shared-standards.md`.
 3. Put formulas on the most relevant node.
-4. Treat source images with the four-way learning-map policy: `preserve` for key evidence charts, `crop_preserve` for source figures whose focused region is useful, `redraw:<template_id>` only when a registered SVG template exists, and `omit` by default.
+4. Treat source images with the five-way learning-map policy: `preserve_full` for clear whole-image evidence, `preserve_crop` for focused source evidence, `redraw_high_fidelity` when source structure/arrows/formulas must survive at map size, `redraw_concept` for simplified registered concept sketches, and `omit` by default.
 5. Use OCR text only to judge image relevance.
 6. Register external referenced visuals as `screenshot_intents`; do not fetch them in this step.
 7. Keep IDs stable and simple: `n1`, `n1_1`, `n1_2`.
@@ -138,6 +138,7 @@ This is a visual organization profile, not a content rewriting mode.
 - Keep Batch on the left side; keep Momentum and the source summary on the right side when the source has this two-topic structure.
 - Under Batch, keep the original sequence: definition, efficiency, generalization, comparison table. Details may render as numbered lists, but the node titles keep `5.1.1` through `5.1.4`.
 - Under Momentum, use a formula node/card and a visual node/card to express `当前梯度 + 历史方向`.
+- Every retained or redrawn figure must carry 1 to 2 short callouts with `source_quote`; if the source cannot support the callout, omit the figure.
 - Keywords render as one bottom capsule strip with title `[*] 关键词`; they are not a numbered source chapter.
 - A tuning or learning-hint node is allowed only when every item is marked `derived_from_summary` or `grounded_hint` and has `source_quote` or `source_span`. Its title must start with `[*]`.
 - Do not sacrifice source truth for symmetry, icons, or a denser canvas.

@@ -22,6 +22,7 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Use the default shared palette with branch-specific accent colors.
 - Root should be visually strongest.
 - For GPT Image 2 inspired source-faithful maps, the root is a large center card with the exact source lesson title and a short source-grounded learning question.
+- For `source_faithful_poster` or `gpt_image2_inspired_source_faithful`, keep the canvas compact enough to feel like a finished learning poster rather than an infinite whiteboard screenshot.
 - Level 1 nodes use accent color.
 - Level 2 and leaves use white or light tinted fills.
 - Images should appear near the node they explain, not near the root.
@@ -33,7 +34,9 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Child cards should remain compact. Use a maximum width around 320 px; wrap long titles/content rather than stretching cards into dashboard panels.
 - Sibling cards under the same H2 may stack tightly. Do not force equal spacing when a compact cluster is more readable.
 - Connect child cards back to the H2 branch hub with same-color thin connectors so cards do not appear to float independently.
+- Keep connector strokes lower-contrast than content cards; images, formulas, and numbered details must carry the visual emphasis.
 - Render keyword nodes (`[*] 关键词`) as a bottom capsule strip; do not give them invented source numbers.
+- Render retained/redrawn images as grouped learning callouts: visual first, then 1 to 2 short source-backed conclusions next to or under the visual.
 
 ## Adaptive Layout
 
@@ -62,6 +65,9 @@ Lesson 5 preferred balance:
 - left: `5.1 Batch（批次）`
 - right: `5.2 Momentum（动量）` and `5.3 本章小结`
 - bottom: `[*] 关键词` and optional `[*] 调参启示` only when grounded
+- Batch branch details should use compact numbered lists for definition, efficiency, generalization, and the comparison table.
+- Momentum branch should keep the formula card close to the visual that explains `当前梯度 + 历史方向`.
+- Never add fake visual-only source numbers such as `5.2.3`, `5.4`, or `5.5`; derived keyword and tuning nodes must keep the `[*]` prefix.
 
 ## Content Rules
 
@@ -81,5 +87,5 @@ If classic output feels crowded:
 
 1. Generate or correct `layout_profile` and switch to `balanced_two_sided` when thresholds are met.
 2. Convert minor leaves into `description` or `notes` only when source fidelity remains traceable.
-3. For screenshot-like source assets, use `crop_preserve` for source-faithful learning evidence, `redraw:<template_id>` when a registered template exists, or `omit`; for true data charts, preserve at readable size before considering omission.
+3. For screenshot-like source assets, use `preserve_crop` for source-faithful learning evidence, `redraw_high_fidelity` when source structure must be preserved through a registered template, `redraw_concept` for simplified registered concept sketches, or `omit`; for true data charts, use `preserve_full` at readable size before considering omission.
 4. Keep formulas and source tables even if the layout must become wider.

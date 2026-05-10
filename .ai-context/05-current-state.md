@@ -4,7 +4,7 @@
 
 **最近更新**: 2026-05-10
 
-> Mind-Master 已完成正式渲染/验证/导出闭环，并新增密集导图自适应双侧布局；当前重点是把 source-faithful outline 生成继续产品化，并扩展第 6-8 节回归。
+> Mind-Master 已完成正式渲染/验证/导出闭环，并把第 5 节升级为带五类图片决策、source-backed callout 和最终图像可读性校验的学习型导图；当前重点是把同一能力扩展到第 6-8 节并减少手工 outline。
 
 ## ✅ Done
 - 仓库基础文件已建立：`README.md`、`README_CN.md`、`.env.example`、`.gitignore`、`requirements.txt`。
@@ -22,6 +22,7 @@
 - 已基于第 5 节第二轮失败案例把截图策略落到执行层：新增 `extract_assets.py` 产出 `type` / `is_data_chart` / `redraw_required`；`render_mindmap.py` 会把截图类资产转为 `redraw`；`batch_validate.py` 会阻塞 HTML/Markdown 对截图类源图的 `<img>` 直嵌。
 - 已新增章节编号与层级校验：H2/H3 节点渲染时保留 `section_id` 和原文编号标题，校验 `section_numbering` 确保 H2 不消失、H3 不被提到一级。
 - 已新增 keywords/tips/summary 相关规则与校验：keywords 可渲染为胶囊条；tips 无原文证据会失败；summary 小结要点必须是完整句。
+- 已将学习型图片策略升级为五类：`preserve_full`、`preserve_crop`、`redraw_high_fidelity`、`redraw_concept`、`omit`；保留/重绘图必须有 source-backed callout，裁剪图必须有 crop metadata，验证器会检查最终渲染可读尺寸。
 
 ## 🚧 In Progress
 - 已为真实课程笔记 DOCX 创建脱敏测试项目 `projects/ml_theory2_test/`；脱敏后的源文件为 `sources/ml_theory2_notes.docx`，可作为后续导图生成测试基线。
@@ -36,11 +37,11 @@
 - 2026-05-10 第三轮修正图像过度工程：图像策略改为 `preserve` / `redraw:<template_id>` / `omit` 三分法且默认 omit；删除通用占位曲线路径，新增 3 个注册 SVG 模板；`lesson_05` 最新决策为 1 张 preserve、3 张 registered redraw、3 张 omit。
 - 2026-05-10 补齐文字承载与回归：keywords 胶囊节点实际渲染 12 个术语，小结完整句与 H3 密度校验通过；新增 `skills/mind-master/tests/test_pipeline_regression.py` 和 `tests/fixtures/pipeline_regression_fixture.docx`，7 个 unittest 断言通过。
 - 2026-05-10 完成第 5 节 Word 原文、当前 Skill 导图与 GPT Image 2 参考导图的复盘：确认当前导图源保真更强，但视觉密度、中心放射布局、截图取舍和自动密度补抽仍需继续优化；GPT Image 2 参考图视觉更清晰但含非原文章节编号。
-- 2026-05-10 已实现 “GPT Image 2 inspired but source-faithful” profile：图像策略扩展为 `preserve` / `crop_preserve` / `redraw` / `omit`，新增伪章节编号校验和 section-local 自动密度补抽；`lesson_05` 重新生成并通过完整验证。
+- 2026-05-10 已实现 “GPT Image 2 inspired but source-faithful” profile，并继续升级为学习型图片 callout：`lesson_05` 最新图像决策为 `fig_p38_004=preserve_full`、`fig_p46_006/fig_p56_007/fig_p63_008=preserve_crop`、`fig_p32_003=redraw_high_fidelity`、`fig_p23_002/fig_p43_005=omit`；HTML/SVG/PNG/PDF 已导出，`heading_coverage`、`section_numbering`、`source_quote`、`table_checks`、`formula_coverage`、`image_decisions`、`forbidden_section_numbers`、`image_readability`、`crop_metadata`、`image_callout_grounding` 均通过。
 
 ## ⏭️ Next
-- 下一轮应继续把 `lesson_05` 的 source-faithful outline 生成方式产品化，减少手工写 outline 的比例，并把第 6-8 节纳入新三分法与文字密度回归。
-- 下一轮可把同一 profile 应用于第 6-8 节，重点观察多公式、多图章节下 `crop_preserve` 的裁剪质量和伪章节编号校验是否过严。
+- 下一轮应继续把 `lesson_05` 的 source-faithful outline 生成方式产品化，减少手工写 outline 的比例，并把第 6-8 节纳入五类图片策略、callout 和可读性校验回归。
+- 下一轮可把同一 profile 应用于第 6-8 节，重点观察多公式、多图章节下 `preserve_crop` 的裁剪质量和伪章节编号校验是否过严。
 - 继续复核第 6 节并用新的 `layout_profile` 链路重生成，确认多公式、多图场景下校验仍可靠。
 - 继续用同一方式生成 `lesson_07`、`lesson_08`；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。

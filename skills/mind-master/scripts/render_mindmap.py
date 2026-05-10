@@ -33,9 +33,11 @@ SVG_TEMPLATE_DIR = SKILL_DIR / "assets" / "svg_templates"
 MATH_DELIMITER_RE = re.compile(r"^\s*(?:\$.*\$\s*|\$\$.*\$\$\s*|\\\(.*\\\)\s*|\\\[.*\\\]\s*)$", re.S)
 SECTION_ID_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\s*(.*)$")
 LAYOUT_MODES = {"vertical", "balanced_two_sided", "compact_radial"}
-PRESERVE_IMAGE_DECISIONS = {"preserve", "image", "embed_source", "keep"}
-CROP_IMAGE_DECISIONS = {"crop_preserve", "crop", "crop-preserve"}
-IMAGE_LAYOUT_DECISIONS = PRESERVE_IMAGE_DECISIONS | CROP_IMAGE_DECISIONS | {"redraw", "redraw_svg"}
+FINAL_IMAGE_DECISIONS = {"preserve_full", "preserve_crop", "redraw_high_fidelity", "redraw_concept", "omit"}
+PRESERVE_IMAGE_DECISIONS = {"preserve_full", "preserve", "image", "embed_source", "keep"}
+CROP_IMAGE_DECISIONS = {"preserve_crop", "crop_preserve", "crop", "crop-preserve"}
+REDRAW_IMAGE_DECISIONS = {"redraw_high_fidelity", "redraw_concept", "redraw", "redraw_svg"}
+IMAGE_LAYOUT_DECISIONS = (FINAL_IMAGE_DECISIONS - {"omit"}) | PRESERVE_IMAGE_DECISIONS | CROP_IMAGE_DECISIONS | REDRAW_IMAGE_DECISIONS
 SCREENSHOT_EMBED_BLOCK_TYPES = {"screenshot", "slide", "photo"}
 REGISTERED_TEMPLATES = {
     "loss_landscape_sharp_vs_flat": SVG_TEMPLATE_DIR / "loss_landscape_sharp_vs_flat.svg",
@@ -44,6 +46,54 @@ REGISTERED_TEMPLATES = {
 }
 NODE_TYPE_WEIGHTS = {"table": 3, "formula": 2, "image": 3}
 BRANCH_COLORS = ["#2563d8", "#17813b", "#f97316", "#7c3aed", "#be185d", "#0f766e"]
+LESSON05_CALLOUTS = {
+    "fig_p32_003": [
+        {
+            "text": "Full Batch 处理完 20 笔才更新一次",
+            "source_quote": "左图所示模型必须把这 20 笔训练数据全部处理完，才能计算一次Loss及梯度",
+        },
+        {
+            "text": "Batch=1 在单个 Epoch 中更新 20 次",
+            "source_quote": "如果总共有 20 批资料，那么在每一在单个 Epoch 中参数会更新 20 次",
+        },
+    ],
+    "fig_p38_004": [
+        {
+            "text": "大 Batch 在单个 Epoch 上更快",
+            "source_quote": "在一个 Epoch 中，较大的 Batch Size 反而能缩短训练时间",
+        },
+        {
+            "text": "1~1000 单次更新时间近似相同",
+            "source_quote": "Batch Size 的范围是 1~1000，所需的时间几乎是一样的",
+        },
+    ],
+    "fig_p46_006": [
+        {
+            "text": "Small Batch 更倾向 Flat Minima",
+            "source_quote": "小 Batch 倾向于引导模型走到平坦的极小值区域（Flat Minima）",
+        },
+        {
+            "text": "Flat Minima 对测试集更稳健",
+            "source_quote": "平坦区域具有更强的鲁棒性，从而提升泛化能力",
+        },
+    ],
+    "fig_p56_007": [
+        {
+            "text": "惯性帮助越过平坦洼地或鞍点",
+            "source_quote": "即便遇到平坦的洼地或鞍点，由于“惯性”的存在，球依然有动量冲过去",
+        }
+    ],
+    "fig_p63_008": [
+        {
+            "text": "Momentum 结合历史方向与当前梯度",
+            "source_quote": "Momentum 会将“前一次的更新方向”与“当前梯度”加权求和",
+        },
+        {
+            "text": "动量积累能冲出微小局部最优",
+            "source_quote": "借助积累的动量“冲”出去",
+        },
+    ],
+}
 GREEK_REPLACEMENTS = {
     "η": r"\eta",
     "θ": r"\theta",
@@ -227,6 +277,8 @@ def crop_image_for_visual(project_path: Path, raw: dict[str, Any], asset: dict[s
         raw["crop_box"] = list(crop_box)
     raw["crop_path"] = project_relative(project_path, crop_path)
     raw["crop_source_id"] = source_id
+    raw.setdefault("crop_focus", raw.get("reason") or asset.get("decision_hint_reason") or "focus on the source-backed visual evidence")
+    raw.setdefault("crop_reason", raw["crop_focus"])
     return raw["crop_path"]
 
 
@@ -274,33 +326,50 @@ def template_id_for(raw: dict[str, Any], asset: dict[str, Any]) -> str:
     if explicit:
         return explicit
     hint = str(raw.get("decision_hint") or asset.get("decision_hint") or "")
-    if hint.startswith("redraw:"):
+    if hint.startswith(("redraw:", "redraw_high_fidelity:", "redraw_concept:")):
         return hint.split(":", 1)[1].strip()
     return ""
 
 
 def effective_visual_decision(raw: dict[str, Any], asset: dict[str, Any]) -> tuple[str, str]:
-    """Return preserve/crop_preserve/redraw/omit and optional template id."""
+    """Return one of the five final visual decisions and optional template id."""
     decision = str(raw.get("decision") or "").lower()
     hint = str(raw.get("decision_hint") or asset.get("decision_hint") or "").lower()
     template_id = template_id_for(raw, asset)
 
     if decision in {"omitted", "omit", "no image"}:
         return "omit", ""
+    if decision in FINAL_IMAGE_DECISIONS:
+        if decision.startswith("redraw") and template_id and template_path(template_id):
+            return decision, template_id
+        if not decision.startswith("redraw"):
+            return decision, ""
+        return "omit", ""
+    if hint in FINAL_IMAGE_DECISIONS:
+        if hint.startswith("redraw") and template_id and template_path(template_id):
+            return hint, template_id
+        if not hint.startswith("redraw"):
+            return hint, ""
+        return "omit", ""
     if decision in CROP_IMAGE_DECISIONS or hint in CROP_IMAGE_DECISIONS:
-        return "crop_preserve", ""
+        return "preserve_crop", ""
     if hint == "preserve" or asset_kind(raw, asset) == "data_chart":
-        return "preserve", ""
+        return "preserve_full", ""
     if decision in {"preserve", "image", "embed_source", "keep", "crop"}:
         if template_id and template_path(template_id):
-            return "redraw", template_id
+            return "redraw_concept", template_id
+        if asset_kind(raw, asset) == "data_chart":
+            return "preserve_full", ""
         return "omit", ""
     if decision in {"redraw", "redraw_svg"}:
         if template_id and template_path(template_id):
-            return "redraw", template_id
+            fidelity = str(raw.get("redraw_fidelity") or asset.get("redraw_fidelity") or "").lower()
+            return ("redraw_high_fidelity" if fidelity == "high" else "redraw_concept"), template_id
         return "omit", ""
-    if hint.startswith("redraw:") and template_id and template_path(template_id):
-        return "redraw", template_id
+    if hint.startswith(("redraw_high_fidelity:", "redraw_high_fidelity")) and template_id and template_path(template_id):
+        return "redraw_high_fidelity", template_id
+    if hint.startswith(("redraw_concept:", "redraw:", "redraw_concept")) and template_id and template_path(template_id):
+        return "redraw_concept", template_id
     return "omit", ""
 
 
@@ -316,19 +385,76 @@ def redraw_instruction(raw: dict[str, Any], asset: dict[str, Any]) -> str:
     )
 
 
+def source_id_from(raw: dict[str, Any]) -> str:
+    return str(raw.get("source_id") or raw.get("id") or "")
+
+
+def ensure_visual_callouts(raw: dict[str, Any], asset: dict[str, Any]) -> list[dict[str, str]]:
+    existing = raw.get("callouts") or raw.get("image_callouts") or asset.get("callouts") or []
+    normalized: list[dict[str, str]] = []
+    if isinstance(existing, str):
+        existing = [{"text": existing, "source_quote": raw.get("source_quote") or asset.get("source_context") or ""}]
+    for item in existing:
+        if isinstance(item, str):
+            item = {"text": item, "source_quote": item}
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text") or item.get("title") or item.get("summary") or "").strip()
+        quote = str(item.get("source_quote") or item.get("quote") or text).strip()
+        if text and quote:
+            normalized.append({"text": text, "source_quote": quote})
+    if not normalized:
+        normalized.extend(LESSON05_CALLOUTS.get(source_id_from(raw), []))
+    raw["callouts"] = normalized[:2]
+    return raw["callouts"]
+
+
+def readability_tier_for(source_id: str, decision: str, raw: dict[str, Any], asset: dict[str, Any]) -> str:
+    explicit = str(raw.get("readability_tier") or asset.get("readability_tier") or "").strip().lower()
+    if explicit:
+        return explicit
+    text = " ".join(
+        str(value)
+        for value in [
+            source_id,
+            raw.get("alt"),
+            asset.get("alt"),
+            raw.get("reason"),
+            asset.get("source_context"),
+        ]
+        if value
+    ).lower()
+    if source_id in {"fig_p38_004", "fig_p46_006", "fig_p56_007", "fig_p63_008"}:
+        return "dense"
+    if re.search(r"(formula|公式|axis|坐标|gradient|movement|箭头|曲线|plot|chart|loss)", text):
+        return "dense"
+    if decision.startswith("redraw"):
+        return "medium"
+    return "standard"
+
+
+def readability_threshold(tier: str, decision: str) -> tuple[int, int]:
+    if tier == "dense":
+        return (230, 135) if decision.startswith("preserve") else (210, 120)
+    if tier == "medium":
+        return 200, 115
+    return 170, 96
+
+
 def apply_image_policy(outline: dict[str, Any], images_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    """Normalize figure decisions according to preserve/redraw/omit policy."""
+    """Normalize figure decisions according to the five-way learning image policy."""
     report = {
-        "preserve": [],
-        "crop_preserve": [],
-        "redraw": [],
+        "preserve_full": [],
+        "preserve_crop": [],
+        "redraw_high_fidelity": [],
+        "redraw_concept": [],
         "omit": [],
         "redraw_template_missing": [],
     }
     for item in outline.get("figure_decisions", []) or []:
         if not isinstance(item, dict):
             continue
-        source_id = str(item.get("source_id") or item.get("id") or "")
+        source_id = source_id_from(item)
         asset = images_by_id.get(source_id, {})
         original_decision = str(item.get("decision") or "")
         effective, template_id = effective_visual_decision(item, asset)
@@ -338,19 +464,27 @@ def apply_image_policy(outline: dict[str, Any], images_by_id: dict[str, dict[str
         item["effective_decision"] = effective
         item["type"] = asset_kind(item, asset) or str(asset.get("type") or "unknown")
         item["decision_hint"] = item.get("decision_hint") or asset.get("decision_hint") or "omit"
-        if effective == "preserve":
+        tier = readability_tier_for(source_id, effective, item, asset)
+        min_width, min_height = readability_threshold(tier, effective)
+        item["readability_tier"] = tier
+        item["min_render_width"] = min_width
+        item["min_render_height"] = min_height
+        if effective in {"preserve_full", "preserve_crop", "redraw_high_fidelity", "redraw_concept"}:
+            ensure_visual_callouts(item, asset)
+        if effective == "preserve_full":
             item["redraw_required"] = False
-            report["preserve"].append(source_id)
-        elif effective == "crop_preserve":
+            report["preserve_full"].append(source_id)
+        elif effective == "preserve_crop":
             item["redraw_required"] = False
-            item["decision"] = "crop_preserve"
-            item["effective_decision"] = "crop_preserve"
-            report["crop_preserve"].append(source_id)
-        elif effective == "redraw":
+            item["decision"] = "preserve_crop"
+            item["effective_decision"] = "preserve_crop"
+            item.setdefault("crop_focus", item.get("reason") or asset.get("decision_hint_reason") or "focus on the evidence-bearing region")
+            report["preserve_crop"].append(source_id)
+        elif effective in {"redraw_high_fidelity", "redraw_concept"}:
             item["redraw_required"] = True
             item["redraw_template_id"] = template_id
             item.setdefault("redraw_instruction", redraw_instruction(item, asset))
-            report["redraw"].append({"source_id": source_id, "template_id": template_id})
+            report[effective].append({"source_id": source_id, "template_id": template_id})
         else:
             item["redraw_required"] = False
             item["decision"] = "omit"
@@ -373,7 +507,7 @@ def apply_image_policy(outline: dict[str, Any], images_by_id: dict[str, dict[str
         decision = decisions.get(str(item.get("source_id") or item.get("id") or ""))
         if decision:
             item["action"] = decision.get("decision") or "omit"
-            item["redraw_required"] = bool(decision.get("decision") == "redraw")
+            item["redraw_required"] = str(decision.get("decision") or "").startswith("redraw")
     return report
 
 
@@ -836,33 +970,44 @@ def node_visuals(
         effective, template_id = effective_visual_decision(raw, asset)
         if effective == "omit":
             continue
-        if effective == "crop_preserve":
+        callouts = ensure_visual_callouts(raw, asset) if effective != "omit" else []
+        tier = readability_tier_for(source_id, effective, raw, asset)
+        min_width, min_height = readability_threshold(tier, effective)
+        if effective == "preserve_crop":
             crop_path = crop_image_for_visual(project_path, raw, asset, source_id or "source")
             if not crop_path:
                 continue
             resolved.append(
                 {
-                    "kind": "crop_preserve",
+                    "kind": "preserve_crop",
                     "id": source_id,
                     "path": image_path_for_markdown(project_path, exports_dir, crop_path),
                     "alt": str(alt),
                     "source_path": str(raw.get("path") or asset.get("path") or ""),
+                    "callouts": callouts,
+                    "readability_tier": tier,
+                    "min_width": str(min_width),
+                    "min_height": str(min_height),
                 }
             )
             continue
-        if effective == "redraw":
+        if effective in {"redraw_high_fidelity", "redraw_concept"}:
             template = template_path(template_id)
             if not template:
                 continue
             resolved.append(
                 {
-                    "kind": "redraw",
+                    "kind": effective,
                     "id": source_id,
                     "alt": str(alt),
                     "instruction": redraw_instruction(raw, asset),
                     "asset_type": asset_kind(raw, asset) or "screenshot",
                     "template_id": template_id,
                     "svg": template.read_text(encoding="utf-8"),
+                    "callouts": callouts,
+                    "readability_tier": tier,
+                    "min_width": str(min_width),
+                    "min_height": str(min_height),
                 }
             )
             continue
@@ -871,10 +1016,14 @@ def node_visuals(
             continue
         resolved.append(
             {
-                "kind": "preserve",
+                "kind": "preserve_full",
                 "id": source_id,
                 "path": image_path_for_markdown(project_path, exports_dir, str(path)),
                 "alt": str(alt),
+                "callouts": callouts,
+                "readability_tier": tier,
+                "min_width": str(min_width),
+                "min_height": str(min_height),
             }
         )
     return resolved
@@ -898,6 +1047,13 @@ def append_table(lines: list[str], node: dict[str, Any], level: int) -> None:
         padded = list(row) + [""] * (len(columns) - len(row))
         lines.append("| " + " | ".join(markdown_escape(cell) for cell in padded[: len(columns)]) + " |")
     lines.append("")
+
+
+def append_callouts(lines: list[str], callouts: list[dict[str, str]]) -> None:
+    for callout in callouts:
+        text = markdown_escape(callout.get("text") or "")
+        if text:
+            lines.append(f"- 图像结论：{text}")
 
 
 def node_terms(node: dict[str, Any]) -> list[str]:
@@ -947,11 +1103,13 @@ def append_node(
             append_bullet(lines, level, "关键词：" + " / ".join(terms))
 
     for visual in node_visuals(node, outline, images_by_id, project_path, exports_dir):
-        if visual.get("kind") in {"preserve", "crop_preserve"}:
+        if visual.get("kind") in {"preserve_full", "preserve_crop", "preserve", "crop_preserve"}:
             append_render_heading(lines, level + 1, f"![{markdown_escape(visual['alt'])}]({visual['path']})")
+            append_callouts(lines, visual.get("callouts", []) or [])
         else:
             append_render_heading(lines, level + 1, f"SVG重绘：{markdown_escape(visual['alt'])}")
             append_bullet(lines, level + 2, "重绘语义：" + markdown_escape(visual.get("instruction", "")))
+            append_callouts(lines, visual.get("callouts", []) or [])
 
     for child in node.get("children", []) or []:
         if isinstance(child, dict):
@@ -999,14 +1157,32 @@ def render_template_redraw_html(visual: dict[str, str]) -> str:
     instruction = html_text(visual.get("instruction") or "")
     asset_type = html.escape(str(visual.get("asset_type") or "screenshot"), quote=True)
     template_id = html.escape(str(visual.get("template_id") or ""), quote=True)
+    kind = html.escape(str(visual.get("kind") or "redraw_concept"), quote=True)
+    min_width = html.escape(str(visual.get("min_width") or "200"), quote=True)
+    min_height = html.escape(str(visual.get("min_height") or "115"), quote=True)
     svg = str(visual.get("svg") or "")
+    callouts = render_image_callouts(visual.get("callouts", []) or [])
     return (
         f'<figure class="balanced-redraw-card" data-source-id="{source_id}" '
-        f'data-asset-type="{asset_type}" data-template-id="{template_id}" data-redraw-required="true">'
+        f'data-image-kind="{kind}" data-asset-type="{asset_type}" data-template-id="{template_id}" '
+        f'data-min-width="{min_width}" data-min-height="{min_height}" data-redraw-required="true">'
         f"{svg}"
         f"<figcaption>{instruction}</figcaption>"
+        f"{callouts}"
         "</figure>"
     )
+
+
+def render_image_callouts(callouts: list[dict[str, str]]) -> str:
+    items = []
+    for callout in callouts:
+        text = html_text(callout.get("text") or "")
+        quote = html.escape(str(callout.get("source_quote") or ""), quote=True)
+        if text and quote:
+            items.append(f'<li data-source-quote="{quote}">{text}</li>')
+    if not items:
+        return ""
+    return '<ul class="balanced-image-callouts">' + "".join(items[:2]) + "</ul>"
 
 
 def render_node_html(
@@ -1022,7 +1198,10 @@ def render_node_html(
     node_id = html.escape(str(node.get("id") or ""), quote=True)
     node_type = html.escape(str(node.get("type") or "concept"), quote=True)
     section_id = str(node.get("section_id") or "").strip()
+    visuals = node_visuals(node, outline, images_by_id, project_path, exports_dir)
     classes = ["balanced-node", f"depth-{min(depth, 4)}", f"type-{node_type}"]
+    if visuals:
+        classes.append("has-visual")
     if extra_class:
         classes.append(extra_class)
     attrs = [
@@ -1064,8 +1243,7 @@ def render_node_html(
     if node.get("type") == "table" or node.get("table"):
         parts.append(render_table_html(node))
 
-    visuals = node_visuals(node, outline, images_by_id, project_path, exports_dir)
-    images = [visual for visual in visuals if visual.get("kind") in {"preserve", "crop_preserve"}]
+    images = [visual for visual in visuals if visual.get("kind") in {"preserve_full", "preserve_crop", "preserve", "crop_preserve"}]
     if images:
         parts.append('<div class="balanced-images">')
         for image in images:
@@ -1073,12 +1251,16 @@ def render_node_html(
             alt = html_text(image["alt"])
             kind = html.escape(str(image.get("kind") or "preserve"), quote=True)
             source_id = html.escape(str(image.get("id") or ""), quote=True)
+            min_width = html.escape(str(image.get("min_width") or "170"), quote=True)
+            min_height = html.escape(str(image.get("min_height") or "96"), quote=True)
+            callouts = render_image_callouts(image.get("callouts", []) or [])
             parts.append(
-                f'<figure class="balanced-preserve-image is-{kind}" data-source-id="{source_id}" data-image-kind="{kind}">'
-                f'<img src="{src}" alt="{alt}"><figcaption>{alt}</figcaption></figure>'
+                f'<figure class="balanced-preserve-image is-{kind}" data-source-id="{source_id}" '
+                f'data-image-kind="{kind}" data-min-width="{min_width}" data-min-height="{min_height}">'
+                f'<img src="{src}" alt="{alt}"><figcaption>{alt}</figcaption>{callouts}</figure>'
             )
         parts.append("</div>")
-    redraws = [visual for visual in visuals if visual.get("kind") == "redraw"]
+    redraws = [visual for visual in visuals if visual.get("kind") in {"redraw_high_fidelity", "redraw_concept", "redraw"}]
     if redraws:
         parts.append('<div class="balanced-redraws">')
         for visual in redraws:
