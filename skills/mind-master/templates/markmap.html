@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18.12"></script>
+  <style>
+    :root {
+      --mm-bg: #fbfbf8;
+      --mm-root: #1f4e5f;
+      --mm-text: #202124;
+      --mm-muted: #5f6368;
+      --mm-line: #8b949e;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--mm-bg);
+      color: var(--mm-text);
+      font-family: {{FONT_STACK}};
+    }
+
+    body {
+      overflow: auto;
+    }
+
+    .mind-master-shell {
+      min-width: {{CANVAS_WIDTH}}px;
+      min-height: {{CANVAS_HEIGHT}}px;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .mind-master-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 24px;
+      margin: 0 0 12px;
+      color: var(--mm-muted);
+      font-size: 14px;
+    }
+
+    .mind-master-header strong {
+      color: var(--mm-root);
+      font-size: 18px;
+    }
+
+    .markmap {
+      width: {{CANVAS_WIDTH}}px;
+      height: {{CANVAS_HEIGHT}}px;
+      background:
+        linear-gradient(rgba(31, 78, 95, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 78, 95, 0.035) 1px, transparent 1px);
+      background-size: 48px 48px;
+      border: 1px solid rgba(31, 78, 95, 0.12);
+      border-radius: 8px;
+      box-shadow: 0 14px 38px rgba(31, 78, 95, 0.10);
+      overflow: hidden;
+    }
+
+    .markmap svg {
+      width: 100%;
+      height: 100%;
+      font-family: {{FONT_STACK}};
+    }
+
+    .markmap .markmap-node > circle {
+      fill: #ffffff;
+      stroke: var(--mm-root);
+      stroke-width: 1.4px;
+    }
+
+    .markmap .markmap-node text,
+    .markmap .markmap-node foreignObject {
+      color: var(--mm-text);
+      fill: var(--mm-text);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .markmap .markmap-node img {
+      display: block;
+      max-width: 360px;
+      max-height: 240px;
+      object-fit: contain;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 4px;
+    }
+
+    .markmap table {
+      border-collapse: collapse;
+      margin: 6px 0;
+      font-size: 13px;
+      background: #ffffff;
+    }
+
+    .markmap th,
+    .markmap td {
+      border: 1px solid #d0d7de;
+      padding: 5px 8px;
+      white-space: nowrap;
+    }
+
+    .markmap th {
+      background: #eef4f4;
+      color: var(--mm-root);
+      font-weight: 700;
+    }
+
+    .katex {
+      font-size: 1.05em;
+    }
+
+    .mind-master-source {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="mind-master-shell">
+    <header class="mind-master-header">
+      <strong>{{TITLE}}</strong>
+      <span>{{META}}</span>
+    </header>
+    <div class="markmap">
+      <script type="text/template">{{MARKDOWN}}</script>
+    </div>
+  </main>
+  <pre class="mind-master-source" id="mind-master-markdown">{{MARKDOWN}}</pre>
+  <script>
+    window.MIND_MASTER_READY = false;
+    window.setTimeout(function markReady() {
+      window.MIND_MASTER_READY = !!document.querySelector('.markmap svg');
+    }, 1800);
+  </script>
+</body>
+</html>

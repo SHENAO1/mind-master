@@ -444,6 +444,7 @@ Command:
 
 ```bash
 python skills/mind-master/scripts/render_mindmap.py projects/<project_name> \
+  --section-id <section_id> \
   --style <classic|logic|org> \
   --image-mode relative
 ```
@@ -451,6 +452,7 @@ python skills/mind-master/scripts/render_mindmap.py projects/<project_name> \
 Outputs:
 
 - `projects/<project_name>/intermediate/mindmap.json`
+- `projects/<project_name>/intermediate/mindmap.md`
 - `projects/<project_name>/exports/<project_name>.html`
 
 Checkpoint:
@@ -459,6 +461,7 @@ Checkpoint:
 GATE 6 ✅ Mind map rendered.
 Deliverables:
 - mindmap json: projects/<project_name>/intermediate/mindmap.json
+- mindmap markdown: projects/<project_name>/intermediate/mindmap.md
 - html: projects/<project_name>/exports/<project_name>.html
 Confirm to continue to Step 7.
 ```
@@ -492,6 +495,8 @@ Checks:
 - every referenced image exists
 - max depth is respected
 - node word limits are respected
+- H2/H3 coverage is complete through `coverage_report`
+- every source table, display formula, and active-section image has an explicit disposition
 
 Checkpoint:
 
@@ -521,6 +526,7 @@ Command:
 
 ```bash
 python skills/mind-master/scripts/export_mindmap.py projects/<project_name> \
+  --section-id <section_id> \
   --html projects/<project_name>/exports/<project_name>.html \
   --scale 2
 ```

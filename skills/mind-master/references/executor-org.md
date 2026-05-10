@@ -23,13 +23,19 @@ Org style renders clean parent-child hierarchy for organizational, taxonomy, cha
 - Avoid radial decoration.
 - Use compact nodes and predictable alignment.
 - Images should be rare and attached only to nodes that need visual identification.
+- Use consistent hue families for each parent subtree.
+- Use contrast colors only when the hierarchy explicitly represents alternatives or opposing concepts.
+- Keep sibling groups separated enough that connectors do not pass through unrelated nodes.
+- Parent node size or visual weight should reflect the number and importance of visible descendants.
 
 ## Content Rules
 
 - Keep labels as entity names or section names.
 - Do not turn every paragraph into a leaf.
-- Use `summary` to preserve important detail below a hierarchy node.
+- Use `description` or `notes` to preserve important detail below a hierarchy node; use `summary` only for explicit source synthesis.
 - Equations belong to the component, section, or concept they define.
+- Render `type: "table"` nodes as compact tables under their owning section.
+- Preserve comparison tables as one child node instead of distributing rows across the hierarchy.
 
 ## Error Helper
 

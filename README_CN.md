@@ -149,4 +149,4 @@ python -m playwright install chromium
 
 ## 当前阶段
 
-当前仓库已建立 Skill、references、项目管理脚本、DOCX 转 Markdown 与 OMML 转 LaTeX 初版。PDF/Web 输入、正式 Markmap 渲染、批量校验和导出脚本仍待补齐。
+当前仓库已建立 Skill、references、项目管理脚本、DOCX 转 Markdown、OMML 转 LaTeX、章节拆分、正式 Markmap 渲染、批量校验和浏览器导出脚本。PDF/Web 输入与 OCR 驱动的资产增强仍待补齐。

@@ -133,4 +133,4 @@ Copy `.env.example` to `.env` if you need model or optional OCR/image service co
 
 ## Current Status
 
-The repository now has the Skill entrypoint, reference specs, project management script, initial DOCX-to-Markdown conversion, and OMML-to-LaTeX conversion. PDF/Web input, formal Markmap rendering, batch validation, and export scripts are still pending.
+The repository now has the Skill entrypoint, reference specs, project management script, initial DOCX-to-Markdown conversion, OMML-to-LaTeX conversion, section splitting, formal Markmap rendering, batch validation, and browser-backed export scripts. PDF/Web input and OCR-backed asset enrichment are still pending.

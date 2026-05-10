@@ -19,6 +19,24 @@
 
 ---
 
+## 2026-05-10 · Codex
+**完成 / Done**: 实现正式 Markmap 渲染闭环：新增 `render_mindmap.py`、`batch_validate.py`、`export_mindmap.py` 和 `templates/markmap.html`；更新 Skill、README 与 references，加入 `coverage_report`、`source_span`、`figure_decisions`、Markmap 主输出和逐图决策规则。用 `lesson_05` 回归跑通 Step 6-8，生成 HTML/SVG/PNG/PDF。
+**进行中 / In progress**: `projects/ml_theory2_test/maps/lesson_05/` 为 ignored 回归产物；其中 outline 已手工改成 source-faithful 版本，用于证明新脚本链路。
+**下一步建议 / Next**: 把 source-faithful outline 生成策略继续脚本化或半自动化，再用第 6 节验证多公式/多表格/多图片场景。
+**注意 / Watch out**: 当前导出依赖 Node.js + Playwright；本机 Python 环境没有 `playwright` 包。PNG/PDF 已从浏览器 Markmap HTML 导出，但画布仍有较多留白，可继续优化 bbox fit/crop。
+
+## 2026-05-09 · Codex
+**完成 / Done**: 使用更新后的 Mind-Master reference 规则重生成第 5 节导图到 `projects/ml_theory2_test/maps/lesson_05_regen/`；输出 `outline.json`、`mindmap.json`、层级/图片决策记录、`validation.json`、`self_check.md`，并导出 HTML/SVG/PNG/PDF。新版保留 Batch / Momentum / 本节小结 H2 骨架，表 5-1 作为 table 节点，具体数字与公式带 source_quote，源截图未嵌入而改为 SVG 概念重绘。
+**进行中 / In progress**: 新版产物仍位于被 git 忽略的测试项目目录中；本轮没有提交生成物。
+**下一步建议 / Next**: 让用户查看 HTML/PNG 效果后，决定是否把 `lesson_05_regen` 的布局和节点格式沉淀进正式渲染脚本，再批量重生成第 6-8 节。
+**注意 / Watch out**: `validation.json` 由本轮生成逻辑写入，正式 `batch_validate.py` 尚未实现 source_quote/table/LaTeX/image policy 的脚本级拦截；HTML 公式依赖 KaTeX，PNG/PDF 来自 SVG 链路。
+
+## 2026-05-09 · Codex
+**完成 / Done**: 基于第 5 节导图失败案例，迭代 `skills/mind-master/references/` 规则：新增层级保真与 Hierarchy GATE、source_quote 和反幻觉要求、节点去重 pass、可选 summary 语义、table 节点格式、数学 delimiter validation、图片 SVG 重绘优先、布局/颜色/权重规则。
+**进行中 / In progress**: 规则文档已改，尚未实现脚本侧验证逻辑。
+**下一步建议 / Next**: 修改 `batch_validate.py` 与渲染器，落实 source_quote 反查、未包裹 LaTeX 扫描、table 节点校验和图像决策字段。
+**注意 / Watch out**: 本轮未改 `SKILL.md` pipeline，也未改 `scripts/`；新增 GATE 位于 reference 规则中。
+
 ## 2026-05-09 · Codex
 **完成 / Done**: 为脱敏测试项目生成第 5 节 `lesson_05` 与第 6 节 `lesson_06` 两张章节导图；每节均输出 `outline.json`、`mindmap.json`、`mindmap.md`、`validation.json`、`self_check.md`，并生成 HTML/SVG/PNG/PDF 到对应 `maps/<section_id>/exports/`。
 **进行中 / In progress**: 导图产物在 `projects/ml_theory2_test/maps/`，按项目规则被 git 忽略；本轮未提交这些生成物。

@@ -15,6 +15,33 @@ Node text must be condensed.
 
 If source text is longer, summarize. Do not paste paragraphs into nodes.
 
+## Fidelity Rules
+
+Mind-Master must stay grounded in the converted source.
+
+- Every leaf-level claim must have evidence in `intermediate/source.md` or the active section source.
+- Do not add background knowledge, hardware assumptions, framework advice, or common-sense explanations unless the source explicitly says them.
+- Strategist nodes must carry `source_quote` for leaf claims and evidence-bearing table rows. The quote may be truncated, but it must be specific enough to find in source text.
+- Validation must sample node claims and reverse-check the source. A claim with no corresponding source evidence is marked `hallucinated: true` and the outline must be rewritten.
+
+## Redundancy Rules
+
+Avoid creating nodes that only restate sibling content.
+
+- If at least 50% of a node's points are synonymous restatements or concatenations of other sibling nodes, the node cannot remain independent.
+- Merge redundant material into the nearest parent as `description` or `notes`; use `summary` only when the synthesis is explicitly present in source.
+- Redundancy signal: a node combines paired phrases such as "X advantage / X disadvantage", "small X / large X", or "fast but risky / slow but robust" when those exact ideas already appear under sibling nodes.
+- Strategist must run a node deduplication pass after drafting the outline. Validation output must record merged or removed nodes under `deduplicated_nodes`.
+
+## Summary Semantics
+
+Summaries are optional and must carry new information.
+
+- There is no requirement that every node has a conclusion or `summary`.
+- Fill `summary` only when the source has an explicit independent synthesis, signaled by words such as "therefore", "conclusion", "in summary", "因此", "结论", "综上", or an equivalent clearly summarizing sentence.
+- `description` and `summary` must not be synonymous. If they repeat each other, keep the more informative one and leave the other empty.
+- Renderers must not display empty "Conclusion", "结论", or summary slots.
+
 ## Depth Limits
 
 - Default `max_depth`: 4

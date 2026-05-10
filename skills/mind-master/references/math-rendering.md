@@ -50,6 +50,15 @@ The Markmap template should include KaTeX assets and auto-render configuration c
 - `\(...\)`
 - `\[...\]`
 
+This rule already existed before the failed case: KaTeX is the intended renderer for `$...$`, `$$...$$`, `\(...\)`, and `\[...\]`. The stricter requirement is that formula-like text must be inside those delimiters before validation.
+
+## Delimiter Validation
+
+- Any node text containing LaTeX syntax such as `_{...}`, `^{...}`, `\frac`, `\sum`, `\sqrt`, `\nabla`, `\theta`, `\eta`, or `\lambda` must be wrapped in math delimiters.
+- Unicode math shorthand such as `θ`, `η`, `λ`, `∇`, and superscript-like expressions should be normalized to editable LaTeX where practical.
+- Step 7 validation must fail when LaTeX-like syntax appears outside `$...$`, `$$...$$`, `\(...\)`, or `\[...\]`.
+- `batch_validate.py` should add a regex scan for unwrapped math patterns. This requires a script update.
+
 ## Error Helper
 
 When math fails:

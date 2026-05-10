@@ -9,6 +9,19 @@ Images must improve comprehension. They are not decoration.
 - screenshots from external URLs after explicit user confirmation
 - future generated images only when the user asks
 
+## Per-Figure Decision Rule
+
+Every image that appears in the active Word/PDF source must receive one explicit decision before rendering.
+
+Allowed decisions:
+
+- `image`: keep and embed the source image near the relevant node.
+- `crop`: keep a readable crop when the original contains useful but crowded content.
+- `redraw`: recreate as SVG or a simple diagram when the original is an instructional sketch, slide screenshot, or too blurry at node size.
+- `omitted`: remove only when decorative, duplicated, too small, unreadable, or not needed for understanding.
+
+Record the decision in both `figure_decisions` and `coverage_report.figures` / `coverage_report.omitted`. Do not silently drop source images.
+
 ## Selection Rules
 
 Keep an image when:
@@ -26,6 +39,40 @@ Reject an image when:
 - it is decorative;
 - it duplicates a clearer image;
 - it cannot be given meaningful alt text.
+
+## Image Handling Priority
+
+Use this priority order for every candidate visual:
+
+1. Prefer no image. If a concept is clear with concise text, table structure, formula, or layout, do not add an image.
+2. Prefer SVG redraw. If a schematic is useful, such as Sharp vs Flat Minima, a vector-sum diagram, or a simple process diagram, the Executor should redraw it as clean inline SVG instead of embedding a raster slide screenshot.
+3. Use the source image only as the last option. Embed a DOCX/PDF image only when it is hard to redraw, such as real experimental curves, heatmaps, screenshots of data, or visually dense evidence, and only when it remains readable at node size.
+
+Source images used in final output must have:
+
+- concise `alt`;
+- visible caption;
+- provenance from `source_anchor`, source page, or original asset ID.
+
+## Schematic vs Data Gate
+
+For every important image candidate, Step 5 must ask:
+
+```text
+Image Decision GATE: 这张候选图是数据图（可保留）还是示意图（应重绘）？
+- image_id: <id>
+- source_anchor: <anchor>
+- proposed decision: no image | redraw_svg | embed_source
+- reason: <why>
+```
+
+Default decisions:
+
+- slide screenshots, whiteboard photos, and lecture schematic images extracted from DOCX use `redraw` when the idea is needed and `omitted` when the image repeats text;
+- real data curves, heatmaps, tables captured as images, or non-redrawable screenshots may use `embed_source` if readable;
+- decorative logos, cover images, and dense text screenshots use `no image`.
+
+`assets/images/index.json` may record `figure_kind`, `decision`, `embed`, `redraw_instruction`, and `caption` to carry this decision into Step 6. The active outline must still include `figure_decisions` so validation can prove every source image was handled.
 
 ## OCR Rules
 
@@ -87,6 +134,7 @@ Local PDF page screenshots do not require external URL confirmation.
 - Do not strip provenance.
 - For external screenshots, store target URL and capture time.
 - Do not upload or republish beyond local output unless the user asks.
+- Avoid republishing lecture slide screenshots when an equivalent inline SVG redraw can explain the concept.
 
 ## Error Helper
 
