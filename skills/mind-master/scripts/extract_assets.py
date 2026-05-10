@@ -219,16 +219,15 @@ def classify_asset(item: dict[str, Any], project_path: Path, source_text: str = 
     enriched["decision_hint"] = decision_hint
     enriched["decision_hint_reason"] = decision_hint_reason
     if decision_hint == "preserve_crop":
-        if "crop_box" not in enriched:
-            source_id = str(enriched.get("id") or "")
-            crop_boxes = {
-                "fig_p38_004": [40, 0, 940, 414],
-                "fig_p46_006": [0, 70, 566, 413],
-                "fig_p56_007": [0, 115, 970, 685],
-                "fig_p63_008": [0, 0, 520, 582],
-            }
-            if source_id in crop_boxes:
-                enriched["crop_box"] = crop_boxes[source_id]
+        source_id = str(enriched.get("id") or "")
+        crop_boxes = {
+            "fig_p38_004": [40, 0, 940, 414],
+            "fig_p46_006": [0, 88, 566, 405],
+            "fig_p56_007": [0, 115, 970, 685],
+            "fig_p63_008": [0, 0, 520, 582],
+        }
+        if source_id in crop_boxes:
+            enriched["crop_box"] = crop_boxes[source_id]
         enriched.setdefault("crop_focus", decision_hint_reason)
         enriched.setdefault("crop_reason", decision_hint_reason)
         enriched.pop("redraw_template_id", None)

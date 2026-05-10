@@ -52,6 +52,7 @@ DOCX/PDF
 14. Learning-poster profiles render paragraph evidence as compact numbered short sentences. Do not cut English words when shortening; keep full `source_quote` / `source_span` for validation.
 15. Course-note nodes should carry `icon` metadata when the node type is recognizable, using simple line icons such as `database`, `file-text`, `gauge`, `line-chart`, `scale`, `running`, `lightbulb`, `settings`, `list-checks`, `key`, and `wrench`.
 16. Compact learning poster layouts must render retained/redrawn figures as evidence cards with `evidence_title`, source figure label, image/redraw, and source-backed callouts. Keywords, Momentum advantages, and tuning hints must merge into one bottom learning band, not scatter as fake numbered sections.
+17. Finished learning posters must be packed against the measured `.balanced-layout` content bbox: prefer a 16:9 canvas, accept 4:3 only when content requires it, keep top/edge/center voids small, and validate left-branch height, evidence-card compactness, compact comparison tables, and the three-column learning band.
 
 ## Required References
 
@@ -533,6 +534,10 @@ Checks:
 - `layout_profile` has a legal mode, density score, and complete first-level branch weights
 - exported PNG/SVG aspect ratio is not an extreme vertical strip when exports exist
 - `source_fidelity` remains complete after layout switching
+- `poster_packing` measures `content_bbox_ratio`, `top_blank_ratio`, `center_void_ratio`, `edge_blank_ratio`, and `poster_aspect_ratio`
+- `batch_height_compactness` measures `left_branch_height_ratio`, `table_compactness`, and `evidence_grid_compactness`
+- `evidence_compactness` checks visible evidence titles/callouts, media-area ratio, and card height
+- `learning_band_compactness` requires exactly three columns, at most 10 rendered keywords, and a 12-15% max band height
 
 Regression command before Step 8:
 

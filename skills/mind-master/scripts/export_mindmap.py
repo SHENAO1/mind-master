@@ -136,7 +136,10 @@ const timeout = Number(timeoutRaw || 60000);
   });
   fs.writeFileSync(svgPath, svg, 'utf8');
 
-  const target = await page.$('.mind-master-shell') || await page.$('body');
+  const mode = await page.evaluate(() => document.body.dataset.layoutMode || 'vertical');
+  const target = mode === 'balanced_two_sided'
+    ? (await page.$('.balanced-layout') || await page.$('.mind-master-shell') || await page.$('body'))
+    : (await page.$('.mind-master-shell') || await page.$('body'));
   const bounds = await target.boundingBox();
   await target.screenshot({ path: pngPath, omitBackground: false });
   await page.pdf({

@@ -467,9 +467,9 @@ def readability_tier_for(source_id: str, decision: str, raw: dict[str, Any], ass
 
 def readability_threshold(tier: str, decision: str) -> tuple[int, int]:
     if tier == "dense":
-        return (210, 120) if decision.startswith("preserve") else (210, 120)
+        return (210, 120) if decision.startswith("preserve") else (200, 100)
     if tier == "medium":
-        return 200, 115
+        return (200, 100) if decision.startswith("redraw") else (200, 115)
     return 170, 96
 
 
@@ -1407,8 +1407,8 @@ def render_table_html(node: dict[str, Any]) -> str:
         cells = "".join(f"<td>{html_text(cell)}</td>" for cell in padded[: len(columns)])
         body_rows.append(f"<tr>{cells}</tr>")
     return (
-        '<div class="balanced-table-wrap">'
-        f'<table><thead><tr>{head}</tr></thead><tbody>{"".join(body_rows)}</tbody></table>'
+        '<div class="balanced-table-wrap" data-table-layout="compact-comparison-matrix">'
+        f'<table class="balanced-comparison-matrix"><thead><tr>{head}</tr></thead><tbody>{"".join(body_rows)}</tbody></table>'
         "</div>"
     )
 
@@ -1431,9 +1431,11 @@ def render_template_redraw_html(visual: dict[str, str]) -> str:
         f'data-image-kind="{kind}" data-asset-type="{asset_type}" data-template-id="{template_id}" '
         f'data-min-width="{min_width}" data-min-height="{min_height}" data-redraw-required="true">'
         f'<div class="balanced-evidence-title">{evidence_title}</div>'
-        f"{svg}"
-        f'<figcaption><span class="balanced-source-label">{source_label}</span>{instruction}</figcaption>'
+        '<div class="balanced-evidence-body">'
+        f'<div class="balanced-evidence-media">{svg}</div>'
         f"{callouts}"
+        "</div>"
+        f'<figcaption><span class="balanced-source-label">{source_label}</span>{instruction}</figcaption>'
         "</figure>"
     )
 
@@ -1464,7 +1466,11 @@ def render_preserve_image_html(image: dict[str, str]) -> str:
         f'<figure class="balanced-preserve-image balanced-evidence-card is-{kind}" data-source-id="{source_id}" '
         f'data-image-kind="{kind}" data-min-width="{min_width}" data-min-height="{min_height}">'
         f'<div class="balanced-evidence-title">{evidence_title}</div>'
-        f'<img src="{src}" alt="{alt}"><figcaption><span class="balanced-source-label">{source_label}</span>{alt}</figcaption>{callouts}</figure>'
+        '<div class="balanced-evidence-body">'
+        f'<div class="balanced-evidence-media"><img src="{src}" alt="{alt}"></div>'
+        f"{callouts}"
+        "</div>"
+        f'<figcaption><span class="balanced-source-label">{source_label}</span>{alt}</figcaption></figure>'
     )
 
 
@@ -1497,10 +1503,44 @@ def render_icon_html(icon: str) -> str:
     )
 
 
+def branch_subtitle(node: dict[str, Any]) -> str:
+    node_id = str(node.get("id") or "")
+    title = str(node.get("title") or "")
+    if node_id == "n_batch" or title.startswith("5.1"):
+        return "Batch Size 决定训练效率与泛化折中"
+    if node_id == "n_momentum" or title.startswith("5.2"):
+        return "用历史方向形成惯性，辅助越过鞍点"
+    if node_id == "n_summary" or title.startswith("5.3"):
+        return "两条源文总结：Batch 取舍与 Momentum 惯性"
+    return str(node.get("description") or node.get("summary") or "").strip()
+
+
+def split_section_title(value: str) -> tuple[str, str]:
+    match = SECTION_ID_RE.match(str(value or "").strip())
+    if not match:
+        return "", str(value or "").strip()
+    return match.group(1), match.group(2).strip()
+
+
 def render_heading_html(node: dict[str, Any], depth: int) -> str:
     level = min(depth + 2, 6)
     icon = render_icon_html(str(node.get("icon") or ""))
-    text = html_text(node.get("title") or node.get("id") or "节点")
+    raw_title = str(node.get("title") or node.get("id") or "节点")
+    text = html_text(raw_title)
+    if depth == 0:
+        section_number, title_text = split_section_title(raw_title)
+        subtitle = smart_truncate(branch_subtitle(node), 32)
+        number_html = f'<span class="balanced-branch-number">{html_text(section_number)}</span>' if section_number else ""
+        title_main = html_text(title_text or raw_title)
+        subtitle_html = f'<span class="balanced-branch-subtitle">{html_text(subtitle)}</span>' if subtitle else ""
+        return (
+            f'<h{level} class="balanced-node-title balanced-branch-title">'
+            f"{number_html}{icon}"
+            '<span class="balanced-title-text">'
+            f'<span class="balanced-branch-main">{title_main}</span>{subtitle_html}'
+            "</span>"
+            f"</h{level}>"
+        )
     if icon:
         return f'<h{level} class="balanced-node-title">{icon}<span class="balanced-title-text">{text}</span></h{level}>'
     return f"<h{level}>{text}</h{level}>"
@@ -1695,18 +1735,21 @@ def render_learning_band_group(node: dict[str, Any]) -> str:
     title = html_text(str(node.get("title") or "").replace("[*]", "").strip())
     icon_key = str(node.get("icon") or ("key" if node.get("type") == "keywords" else "wrench"))
     icon = render_icon_html(icon_key)
+    terms = node_terms(node)
     attrs = [
         'class="balanced-band-group"',
         f'data-node-id="{node_id}"',
         f'data-icon="{html.escape(icon_key, quote=True)}"',
         'data-derived="true"',
     ]
+    if node.get("type") == "keywords":
+        attrs.append(f'data-keyword-total="{len(terms)}"')
+        attrs.append(f'data-keyword-rendered="{min(len(terms), 10)}"')
     parts = [f'<div {" ".join(attrs)}><h3>{icon}<span>{title}</span></h3>']
-    terms = node_terms(node)
     if node.get("type") == "keywords" and terms:
         parts.append(
             '<div class="balanced-keyword-pills">'
-            + "".join(f'<span class="keywords-pill">{html_text(term)}</span>' for term in terms)
+            + "".join(f'<span class="keywords-pill">{html_text(term)}</span>' for term in terms[:10])
             + "</div>"
         )
     else:
@@ -1718,6 +1761,15 @@ def render_learning_band_group(node: dict[str, Any]) -> str:
             parts.append("</ol>")
     parts.append("</div>")
     return "".join(parts)
+
+
+def ordered_learning_band_nodes(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    order = {
+        "n_momentum_advantages": 0,
+        "n_tuning_hints": 1,
+        "n_keywords": 2,
+    }
+    return sorted(nodes, key=lambda node: (order.get(str(node.get("id") or ""), 99), str(node.get("id") or "")))
 
 
 def build_balanced_html(
@@ -1750,9 +1802,24 @@ def build_balanced_html(
 
     def render_branch(node: dict[str, Any], side: str, index: int, count: int) -> str:
         node_id = str(node.get("id") or "")
-        color = BRANCH_COLORS[index % len(BRANCH_COLORS)] if side == "left" else BRANCH_COLORS[(index + 1) % len(BRANCH_COLORS)]
+        color_by_node = {
+            "n_batch": "#2563d8",
+            "n_momentum": "#17813b",
+            "n_summary": "#f97316",
+        }
+        color = color_by_node.get(
+            node_id,
+            BRANCH_COLORS[index % len(BRANCH_COLORS)] if side == "left" else BRANCH_COLORS[(index + 1) % len(BRANCH_COLORS)],
+        )
         weight = weight_by_id.get(node_id, 0)
         dominant = " is-dominant" if weight == max_weight and weight > 0 else ""
+        semantic_class = ""
+        if node_id == "n_summary":
+            semantic_class = " is-summary-zone"
+        elif node_id == "n_momentum":
+            semantic_class = " is-momentum-zone"
+        elif node_id == "n_batch":
+            semantic_class = " is-batch-zone"
         children = [
             child for child in node.get("children", []) or []
             if isinstance(child, dict) and not is_learning_enhancement_node(child)
@@ -1773,7 +1840,7 @@ def build_balanced_html(
             extra_class="balanced-hub",
         )
         return (
-            f'<section class="balanced-branch{dominant}" data-side="{side}" data-node-id="{html.escape(node_id, quote=True)}" '
+            f'<section class="balanced-branch{dominant}{semantic_class}" data-side="{side}" data-node-id="{html.escape(node_id, quote=True)}" '
             f'data-branch-index="{index}" data-side-count="{count}" style="--branch-color:{color}">'
             + (child_block + hub if side == "left" else hub + child_block)
             + "</section>"
@@ -1786,10 +1853,9 @@ def build_balanced_html(
     def render_bottom(nodes: list[dict[str, Any]]) -> str:
         if not nodes:
             return ""
-        body = "".join(render_learning_band_group(node) for node in nodes)
+        body = "".join(render_learning_band_group(node) for node in ordered_learning_band_nodes(nodes))
         return (
-            '<section class="balanced-learning-band" aria-label="学习增强带" data-derived="true">'
-            '<div class="balanced-band-title">学习增强带</div>'
+            '<section class="balanced-learning-band" aria-label="学习增强带" data-derived="true" data-column-count="3">'
             f"{body}</section>"
         )
 

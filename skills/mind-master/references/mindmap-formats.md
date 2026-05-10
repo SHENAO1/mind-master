@@ -106,6 +106,7 @@ Rules:
 - `side` is `center` for `vertical` / `compact_radial`, and `left` or `right` for `balanced_two_sided`.
 - Layout changes must not remove or merge H2/H3 sections, tables, formulas, or figure decisions.
 - `visual_profile: "compact_learning_poster"` means the same source-faithful tree is rendered as a finished learning poster: stronger center card, closer branches, evidence cards, a bottom learning band, and low-noise connectors.
+- Compact learning posters must measure the final `.balanced-layout` content bbox and report poster-packing metrics: `content_bbox_ratio`, `top_blank_ratio`, `center_void_ratio`, `edge_blank_ratio`, and `poster_aspect_ratio`.
 - Under `balanced_two_sided`, all H3 and lower content under the same H2 stays on the same side as that H2.
 - H2 headings remain first-level branches and H3 headings remain second-level nodes. `balanced_two_sided` may move an entire H2 branch left/right, but must not promote H3 nodes to first-level cards.
 
@@ -188,6 +189,7 @@ Screenshot-like assets are not eligible for direct embed:
 - A `redraw_high_fidelity` or `redraw_concept` decision must preserve `source_id`, `source_path`, `alt`, `redraw_template_id`, and `redraw_instruction`; coverage action should match the final decision.
 - Every retained or redrawn figure must include 1 to 2 callouts. Each callout has short `text` plus a `source_quote` that appears in the active source.
 - Every retained or redrawn figure in learning-poster layouts must include `evidence_title` and `source_figure_label`, and render as an evidence card: title, image/redraw, 1-2 source-backed callouts, and figure provenance.
+- Evidence cards should use a compact teaching-callout structure: media and source-backed conclusion chips appear as one group, and multi-figure evidence nodes may use side-by-side cards when this lowers branch height without hurting readability.
 - Retained figures must include a readability tier or explicit `min_render_width` / `min_render_height` so validation can prove the final PNG/PDF is readable.
 - Missing redraw templates must downgrade to `omit` before rendering and validation must record the absence.
 
@@ -378,6 +380,10 @@ PNG default scale: `2`.
 - `evidence_card_quality`: every retained/redrawn figure has `evidence_title`, source figure label, source-backed callouts, and readable rendered area
 - `bottom_learning_band`: keywords, tuning hints, and derived advantages are grouped in one bottom band without fake section numbers
 - `connector_noise`: connector count, stroke width, opacity, and center-card crossing checks
+- `poster_packing`: `content_bbox_ratio`, `top_blank_ratio`, `center_void_ratio`, `edge_blank_ratio`, and `poster_aspect_ratio`
+- `batch_height_compactness`: `left_branch_height_ratio`, `table_compactness`, and `evidence_grid_compactness`
+- `evidence_compactness`: `evidence_title_visible`, `evidence_callout_visible`, `evidence_media_area_ratio`, and `evidence_card_not_too_tall`
+- `learning_band_compactness`: `learning_band_column_count`, `learning_band_keyword_limit`, and `learning_band_height_ratio`
 - `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
 - `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence

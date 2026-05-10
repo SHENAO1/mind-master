@@ -933,6 +933,113 @@ def check_connector_noise(browser: dict[str, Any]) -> dict[str, Any]:
     return {"passed": not failures, "metrics": metrics, "failures": failures}
 
 
+def check_poster_packing(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "poster packing applies to balanced poster layouts"}
+    metrics = browser.get("layoutAesthetics") or {}
+    failures: list[str] = []
+
+    def num(key: str, default: float = 0.0) -> float:
+        value = metrics.get(key)
+        return default if value is None else float(value)
+
+    aspect = num("posterAspectRatio") or num("aspectRatio")
+    if not (1.45 <= aspect <= 1.90):
+        failures.append(f"poster_aspect_ratio {aspect:.3f} is not close enough to 16:9 poster range")
+    if num("contentBBoxRatio") < 0.72:
+        failures.append(f"content_bbox_ratio {num('contentBBoxRatio'):.3f} is too low")
+    if num("topBlankRatio", 1.0) > 0.04:
+        failures.append(f"top_blank_ratio {num('topBlankRatio'):.3f} is too high")
+    if num("edgeBlankRatio", 1.0) > 0.04:
+        failures.append(f"edge_blank_ratio {num('edgeBlankRatio'):.3f} is too high")
+    if num("centerVoidRatio", 1.0) > 0.16:
+        failures.append(f"center_void_ratio {num('centerVoidRatio'):.3f} is too high")
+    if num("blankRatio", 1.0) > 0.62:
+        failures.append(f"occupied-area blank ratio {num('blankRatio'):.3f} is too high for a poster")
+    return {"passed": not failures, "metrics": metrics, "failures": failures}
+
+
+def check_batch_height_compactness(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "batch height compactness applies to balanced poster layouts"}
+    metrics = browser.get("layoutAesthetics") or {}
+    table_metrics = browser.get("tableMetrics") or []
+    evidence_grids = browser.get("evidenceGrids") or []
+    failures: list[str] = []
+    left_ratio = float(metrics.get("leftBranchHeightRatio") or 0)
+    if left_ratio <= 0 or left_ratio > 0.90:
+        failures.append(f"left_branch_height_ratio {left_ratio:.3f} is too high")
+    for table in table_metrics:
+        avg_row = float(table.get("avgRowHeight") or 0)
+        max_row = float(table.get("maxRowHeight") or 0)
+        if avg_row > 25 or max_row > 30:
+            failures.append(f"table_compactness failed: avg_row={avg_row:.1f}, max_row={max_row:.1f}")
+    for grid in evidence_grids:
+        if int(grid.get("cardCount") or 0) < 2:
+            continue
+        if float(grid.get("heightRatio") or 0) > 0.22 or float(grid.get("avgCardHeight") or 0) > 235:
+            failures.append(
+                "evidence_grid_compactness failed: "
+                f"height_ratio={float(grid.get('heightRatio') or 0):.3f}, "
+                f"avg_card_height={float(grid.get('avgCardHeight') or 0):.1f}"
+            )
+    return {
+        "passed": not failures,
+        "metrics": {
+            "left_branch_height_ratio": left_ratio,
+            "table_compactness": table_metrics,
+            "evidence_grid_compactness": evidence_grids,
+        },
+        "failures": failures,
+    }
+
+
+def check_evidence_compactness(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    cards = browser.get("evidenceCards") or []
+    failures: list[dict[str, Any]] = []
+    for card in cards:
+        source_id = str(card.get("sourceId") or "")
+        if not card.get("evidenceTitleVisible"):
+            failures.append({"source_id": source_id, "reason": "evidence_title_visible failed"})
+        if not card.get("evidenceCalloutVisible"):
+            failures.append({"source_id": source_id, "reason": "evidence_callout_visible failed"})
+        if float(card.get("mediaAreaRatio") or 0) < 0.24:
+            failures.append({"source_id": source_id, "reason": "evidence_media_area_ratio too low", "ratio": card.get("mediaAreaRatio")})
+        if float(card.get("cardHeightRatio") or 0) > 0.19 or float(card.get("cardHeight") or 0) > 245:
+            failures.append(
+                {
+                    "source_id": source_id,
+                    "reason": "evidence_card_not_too_tall failed",
+                    "height": card.get("cardHeight"),
+                    "height_ratio": card.get("cardHeightRatio"),
+                }
+            )
+    return {"passed": not failures, "checked": len(cards), "cards": cards, "failures": failures}
+
+
+def check_learning_band_compactness(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "learning band compactness applies to balanced poster layouts"}
+    data = browser.get("bottomLearningBand") or {}
+    failures: list[str] = []
+    if int(data.get("columnCount") or 0) != 3:
+        failures.append(f"learning_band_column_count is {data.get('columnCount')}, expected 3")
+    if int(data.get("keywordRendered") or 0) > 10:
+        failures.append(f"learning_band_keyword_limit failed: rendered {data.get('keywordRendered')} keywords")
+    height_ratio = float(data.get("heightRatio") or 0)
+    if height_ratio <= 0 or height_ratio > 0.15:
+        failures.append(f"learning_band_height_ratio {height_ratio:.3f} is outside 0-0.15")
+    return {"passed": not failures, "metrics": data, "failures": failures}
+
+
 def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
     required = [
         "heading_coverage",
@@ -1158,15 +1265,40 @@ const timeout = Number(process.argv[3] || 60000);
       cx: Math.round(rect.left + rect.width / 2),
       cy: Math.round(rect.top + rect.height / 2)
     }) : null;
+    const unionRect = (elements) => {
+      const rects = elements
+        .map((el) => el.getBoundingClientRect())
+        .filter((rect) => rect.width > 0 && rect.height > 0);
+      if (!rects.length) return null;
+      const left = Math.min(...rects.map((rect) => rect.left));
+      const top = Math.min(...rects.map((rect) => rect.top));
+      const right = Math.max(...rects.map((rect) => rect.right));
+      const bottom = Math.max(...rects.map((rect) => rect.bottom));
+      return { left, top, right, bottom, width: right - left, height: bottom - top };
+    };
     const layoutRect = layout ? layout.getBoundingClientRect() : null;
     const rootRect = root ? root.getBoundingClientRect() : null;
     const bottomRect = bottomBand ? bottomBand.getBoundingClientRect() : null;
     const posterNodes = layout ? Array.from(layout.querySelectorAll('.balanced-root, .balanced-node, .balanced-learning-band')) : [];
+    const contentRect = unionRect(posterNodes);
     const occupiedArea = posterNodes.reduce((sum, el) => {
       const r = el.getBoundingClientRect();
       return sum + Math.max(0, r.width) * Math.max(0, r.height);
     }, 0);
     const layoutArea = layoutRect ? layoutRect.width * layoutRect.height : 0;
+    const leftContentRect = layout ? unionRect(Array.from(layout.querySelectorAll('.balanced-side.left .balanced-node'))) : null;
+    const nonRootNodes = layout ? Array.from(layout.querySelectorAll('.balanced-side .balanced-node')) : [];
+    const leftMaxRight = rootRect ? Math.max(...nonRootNodes.filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.right <= rootRect.left;
+    }).map((el) => el.getBoundingClientRect().right), layoutRect ? layoutRect.left : 0) : 0;
+    const rightMinLeft = rootRect ? Math.min(...nonRootNodes.filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.left >= rootRect.right;
+    }).map((el) => el.getBoundingClientRect().left), layoutRect ? layoutRect.right : 0) : 0;
+    const centerGap = layoutRect && rootRect ? (
+      Math.max(0, rootRect.left - leftMaxRight) + Math.max(0, rightMinLeft - rootRect.right)
+    ) : 0;
     const rootCenterOffset = layoutRect && rootRect ? {
       x: Math.abs((rootRect.left + rootRect.width / 2) - (layoutRect.left + layoutRect.width / 2)),
       y: Math.abs((rootRect.top + rootRect.height / 2) - (layoutRect.top + layoutRect.height / 2)),
@@ -1186,16 +1318,49 @@ const timeout = Number(process.argv[3] || 60000);
     }) : [];
     const evidenceCards = Array.from(document.querySelectorAll('.balanced-evidence-card')).map((figure) => {
       const media = figure.querySelector('img, svg');
+      const cardRect = figure.getBoundingClientRect();
       const rect = media ? media.getBoundingClientRect() : figure.getBoundingClientRect();
+      const titleRect = figure.querySelector('.balanced-evidence-title')?.getBoundingClientRect();
+      const calloutRect = figure.querySelector('.balanced-image-callouts')?.getBoundingClientRect();
       return {
         sourceId: figure.dataset.sourceId || '',
         kind: figure.dataset.imageKind || '',
+        cardWidth: Math.round(cardRect.width),
+        cardHeight: Math.round(cardRect.height),
         width: Math.round(rect.width),
         height: Math.round(rect.height),
         area: Math.round(rect.width * rect.height),
+        mediaAreaRatio: cardRect.width && cardRect.height ? Number(((rect.width * rect.height) / (cardRect.width * cardRect.height)).toFixed(3)) : 0,
+        cardHeightRatio: layoutRect ? Number((cardRect.height / layoutRect.height).toFixed(3)) : 0,
         hasEvidenceTitle: !!figure.querySelector('.balanced-evidence-title'),
+        evidenceTitleVisible: !!titleRect && titleRect.width > 0 && titleRect.height > 0,
         calloutCount: figure.querySelectorAll('.balanced-image-callouts li[data-source-quote]').length,
+        evidenceCalloutVisible: !!calloutRect && calloutRect.width > 0 && calloutRect.height > 0,
         hasSourceLabel: !!figure.querySelector('.balanced-source-label')
+      };
+    });
+    const evidenceGrids = Array.from(document.querySelectorAll('.balanced-node.has-multiple-visuals .balanced-evidence-grid')).map((grid) => {
+      const rect = grid.getBoundingClientRect();
+      const cards = Array.from(grid.querySelectorAll('.balanced-evidence-card')).map((card) => card.getBoundingClientRect());
+      return {
+        cardCount: cards.length,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        avgCardHeight: cards.length ? Math.round(cards.reduce((sum, card) => sum + card.height, 0) / cards.length) : 0,
+        heightRatio: layoutRect ? Number((rect.height / layoutRect.height).toFixed(3)) : 0
+      };
+    });
+    const tableMetrics = Array.from(document.querySelectorAll('.balanced-table-wrap table')).map((table) => {
+      const rect = table.getBoundingClientRect();
+      const rows = Array.from(table.querySelectorAll('tbody tr')).map((row) => row.getBoundingClientRect());
+      const header = table.querySelector('thead tr')?.getBoundingClientRect();
+      return {
+        rowCount: rows.length,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        avgRowHeight: rows.length ? Number((rows.reduce((sum, row) => sum + row.height, 0) / rows.length).toFixed(1)) : 0,
+        maxRowHeight: rows.length ? Math.round(Math.max(...rows.map((row) => row.height))) : 0,
+        headerHeight: header ? Math.round(header.height) : 0
       };
     });
     const connectors = Array.from(document.querySelectorAll('.balanced-live-connectors path')).map((path) => {
@@ -1246,7 +1411,14 @@ const timeout = Number(process.argv[3] || 60000);
         root: rectObj(rootRect),
         bottomBand: rectObj(bottomRect),
         aspectRatio: layoutRect ? Number((layoutRect.width / layoutRect.height).toFixed(3)) : 0,
+        posterAspectRatio: layoutRect ? Number((layoutRect.width / layoutRect.height).toFixed(3)) : 0,
         blankRatio: layoutArea ? Number(Math.max(0, 1 - Math.min(occupiedArea / layoutArea, 1)).toFixed(3)) : 1,
+        contentBBox: rectObj(contentRect),
+        contentBBoxRatio: layoutArea && contentRect ? Number(((contentRect.width * contentRect.height) / layoutArea).toFixed(3)) : 0,
+        topBlankRatio: layoutRect && contentRect ? Number(((contentRect.top - layoutRect.top) / layoutRect.height).toFixed(3)) : 1,
+        edgeBlankRatio: layoutRect && contentRect ? Number((Math.max(contentRect.left - layoutRect.left, layoutRect.right - contentRect.right) / layoutRect.width).toFixed(3)) : 1,
+        centerVoidRatio: layoutRect ? Number((centerGap / layoutRect.width).toFixed(3)) : 1,
+        leftBranchHeightRatio: layoutRect && leftContentRect ? Number((leftContentRect.height / layoutRect.height).toFixed(3)) : 0,
         rootCenterOffset,
         branchDistances,
         maxBranchDistance: branchDistances.length ? Math.max(...branchDistances) : 0,
@@ -1254,11 +1426,16 @@ const timeout = Number(process.argv[3] || 60000);
         bottomBandHeightRatio: layoutRect && bottomRect ? Number((bottomRect.height / layoutRect.height).toFixed(3)) : 0
       },
       evidenceCards,
+      evidenceGrids,
+      tableMetrics,
       bottomLearningBand: {
         present: !!bottomBand,
         nodeIds: bottomBand ? Array.from(bottomBand.querySelectorAll('[data-node-id]')).map((el) => el.dataset.nodeId || '') : [],
         scatteredEnhancements,
-        heightRatio: layoutRect && bottomRect ? Number((bottomRect.height / layoutRect.height).toFixed(3)) : 0
+        heightRatio: layoutRect && bottomRect ? Number((bottomRect.height / layoutRect.height).toFixed(3)) : 0,
+        columnCount: bottomBand ? getComputedStyle(bottomBand).gridTemplateColumns.split(' ').filter(Boolean).length : 0,
+        keywordRendered: bottomBand ? Number(bottomBand.querySelector('[data-keyword-rendered]')?.dataset.keywordRendered || 0) : 0,
+        keywordTotal: bottomBand ? Number(bottomBand.querySelector('[data-keyword-total]')?.dataset.keywordTotal || 0) : 0
       },
       connectorMetrics: {
         count: connectors.length,
@@ -1400,6 +1577,10 @@ def main(argv: list[str] | None = None) -> int:
         checks["evidence_card_quality"] = check_evidence_card_quality(mindmap, source_text, checks["browser"])
         checks["bottom_learning_band"] = check_bottom_learning_band(root, checks["browser"])
         checks["connector_noise"] = check_connector_noise(checks["browser"])
+        checks["poster_packing"] = check_poster_packing(checks["browser"])
+        checks["batch_height_compactness"] = check_batch_height_compactness(checks["browser"])
+        checks["evidence_compactness"] = check_evidence_compactness(checks["browser"])
+        checks["learning_band_compactness"] = check_learning_band_compactness(checks["browser"])
 
         for name, check in checks.items():
             if isinstance(check, dict) and not check.get("passed", False):

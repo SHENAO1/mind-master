@@ -392,6 +392,10 @@ class PipelineRegressionTests(unittest.TestCase):
         self.assertTrue(self.validation["checks"]["layout_aesthetics"]["passed"])
         self.assertTrue(self.validation["checks"]["bottom_learning_band"]["passed"])
         self.assertTrue(self.validation["checks"]["connector_noise"]["passed"])
+        self.assertTrue(self.validation["checks"]["poster_packing"]["passed"])
+        self.assertTrue(self.validation["checks"]["batch_height_compactness"]["passed"])
+        self.assertTrue(self.validation["checks"]["evidence_compactness"]["passed"])
+        self.assertTrue(self.validation["checks"]["learning_band_compactness"]["passed"])
         for item in self.mindmap["figure_decisions"]:
             if item.get("decision") == "omit":
                 continue
