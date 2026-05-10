@@ -20,6 +20,18 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 将 `lesson_05` 从 source-faithful 导图继续升级为 `compact_learning_poster`：中心卡片更强，左右分支收拢，图片节点改为带 `evidence_title`、图号、图像/重绘和 source-backed callout 的图证卡；关键词、调参启示和 Momentum 优势合并为单条底部学习增强带；连接线变细并降低透明度。
+**进行中 / In progress**: 已重新抽取素材、渲染、导出并验证 `projects/ml_theory2_test/maps/lesson_05`；HTML/SVG/PNG/PDF 均生成。新增 `layout_aesthetics`、`evidence_card_quality`、`bottom_learning_band`、`connector_noise` 校验全部通过，既有 source fidelity 校验也全部通过。
+**下一步建议 / Next**: 将 compact poster 规则推广到第 6-8 节，重点复核不同章节的图证卡阈值、底栏高度和连接线是否需要章节级参数。
+**注意 / Watch out**: `layout_aesthetics` 依赖浏览器实测；跳过浏览器时该类版面检查会标记 skipped。当前生成产物仍在 ignored 的 `projects/ml_theory2_test/`。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 根据用户最新导图截图、源 Word 第 5 节和联网思维导图样例做优化复盘。确认当前版本已完成 source-faithful、图片裁剪、callout、派生节点和可读性校验；下一步重点应转向 poster compaction、图证卡设计、中心锚点强化、连接线降噪和版面质量自动检测。
+**进行中 / In progress**: 本轮未修改生成代码；给出下一步 Skill 优化方向和可直接使用的提示词。
+**下一步建议 / Next**: 新增 layout aesthetics/readability gates：空白率、中心偏移、节点到中心距离、图证卡最小面积、底栏密度、连接线覆盖率；将 `lesson_05` 专用规则抽象为跨章节策略后回归第 6-8 节。
+**注意 / Watch out**: 继续禁止把联网样例或 GPT Image 2 的派生内容伪装成原文章节；外部样例只作为视觉结构参考。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 继续优化 Mind-Master 为 source-faithful 学习型 poster：`lesson_05` 节点压缩为可追溯 source_quote/source_span 的编号短句，中心卡片强化为课程标题与核心主题；新增图标 metadata 与 HTML 线性图标渲染；Momentum 优势、关键词、调参启示改为 `[*]` 派生/grounded hint 节点并记录 `derived_from`，禁止伪装成原文章节。
 **进行中 / In progress**: 已重新抽取素材、渲染、导出并验证 `projects/ml_theory2_test/maps/lesson_05`；HTML/SVG/PNG/PDF 均已生成，`batch_validate.py` 通过。最新图片决策：`fig_p38_004=preserve_crop`，`fig_p46_006=preserve_crop`，`fig_p56_007=preserve_crop`，`fig_p63_008=preserve_crop`，`fig_p32_003=redraw_high_fidelity`，`fig_p23_002/fig_p43_005=omit`。
 **下一步建议 / Next**: 将短句压缩、图标 metadata、派生节点标记和图片 callout/readability 规则推广到第 6-8 节；减少 `lesson_05` 专用映射，沉淀为通用 Strategist/Executor 生成逻辑。

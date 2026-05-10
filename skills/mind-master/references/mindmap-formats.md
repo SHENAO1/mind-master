@@ -84,6 +84,7 @@ Top-level Strategist fields:
 {
   "layout_profile": {
     "mode": "vertical | balanced_two_sided | compact_radial",
+    "visual_profile": "compact_learning_poster",
     "density_score": 0,
     "reason": "",
     "branch_weights": [
@@ -104,6 +105,7 @@ Rules:
 - `branch_weights` must include every first-level branch under the root.
 - `side` is `center` for `vertical` / `compact_radial`, and `left` or `right` for `balanced_two_sided`.
 - Layout changes must not remove or merge H2/H3 sections, tables, formulas, or figure decisions.
+- `visual_profile: "compact_learning_poster"` means the same source-faithful tree is rendered as a finished learning poster: stronger center card, closer branches, evidence cards, a bottom learning band, and low-noise connectors.
 - Under `balanced_two_sided`, all H3 and lower content under the same H2 stays on the same side as that H2.
 - H2 headings remain first-level branches and H3 headings remain second-level nodes. `balanced_two_sided` may move an entire H2 branch left/right, but must not promote H3 nodes to first-level cards.
 
@@ -154,6 +156,8 @@ Every image in the active source must receive one explicit decision:
       "decision": "preserve_full",
       "node_id": "n_batch_speed",
       "node_path": "root > Batch > 效率机制",
+      "evidence_title": "证明：大 Batch 在一个 Epoch 上更省时",
+      "source_figure_label": "图5-3",
       "alt": "不同 Batch Size 下单次更新时间与 Epoch 时间对比",
       "reason": "核心实验趋势图，文字无法完全替代",
       "callouts": [
@@ -183,6 +187,7 @@ Screenshot-like assets are not eligible for direct embed:
 - A `preserve_crop` decision must preserve `source_id`, `source_path`, `alt`, `crop_box`, `crop_source_id`, `crop_path`, and `crop_focus` or `crop_reason`; coverage action should be `preserve_crop`.
 - A `redraw_high_fidelity` or `redraw_concept` decision must preserve `source_id`, `source_path`, `alt`, `redraw_template_id`, and `redraw_instruction`; coverage action should match the final decision.
 - Every retained or redrawn figure must include 1 to 2 callouts. Each callout has short `text` plus a `source_quote` that appears in the active source.
+- Every retained or redrawn figure in learning-poster layouts must include `evidence_title` and `source_figure_label`, and render as an evidence card: title, image/redraw, 1-2 source-backed callouts, and figure provenance.
 - Retained figures must include a readability tier or explicit `min_render_width` / `min_render_height` so validation can prove the final PNG/PDF is readable.
 - Missing redraw templates must downgrade to `omit` before rendering and validation must record the absence.
 
@@ -240,6 +245,7 @@ Rules:
 - Use 8 to 12 terms when the source supports that many.
 - Terms must come from the active source, not general domain knowledge.
 - Keywords render as a horizontal bottom capsule strip in GPT Image 2 inspired layouts.
+- In compact learning posters, keywords join tuning hints and Momentum advantages in a single bottom learning band. They must not appear as separate fake source sections.
 - Keywords are derived nodes, not source chapters; keep the `[*]` prefix and do not assign source-style section numbers.
 - Keywords must carry `derived: true` and `derived_from`.
 
@@ -368,6 +374,10 @@ PNG default scale: `2`.
 - `image_readability`: retained or redrawn images meet their required final render width and height
 - `derived_node_labeling`: derived nodes have `derived=true` or `grounded_hint=true`, include `derived_from`, and do not use source-style section numbers
 - `text_compression`: compressed visible titles do not truncate English words and auto density nodes stay within the owning `source_span`
+- `layout_aesthetics`: compact poster ratio, blank rate, center-card position, branch distance, and bottom-band height checks
+- `evidence_card_quality`: every retained/redrawn figure has `evidence_title`, source figure label, source-backed callouts, and readable rendered area
+- `bottom_learning_band`: keywords, tuning hints, and derived advantages are grouped in one bottom band without fake section numbers
+- `connector_noise`: connector count, stroke width, opacity, and center-card crossing checks
 - `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
 - `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence

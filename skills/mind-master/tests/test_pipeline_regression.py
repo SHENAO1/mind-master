@@ -385,6 +385,19 @@ class PipelineRegressionTests(unittest.TestCase):
         self.assertIn("file-text", icons)
         self.assertIn("key", icons)
 
+    def test_evidence_cards_and_learning_band(self):
+        self.assertIn("balanced-evidence-card", self.html)
+        self.assertIn("balanced-learning-band", self.html)
+        self.assertTrue(self.validation["checks"]["evidence_card_quality"]["passed"])
+        self.assertTrue(self.validation["checks"]["layout_aesthetics"]["passed"])
+        self.assertTrue(self.validation["checks"]["bottom_learning_band"]["passed"])
+        self.assertTrue(self.validation["checks"]["connector_noise"]["passed"])
+        for item in self.mindmap["figure_decisions"]:
+            if item.get("decision") == "omit":
+                continue
+            self.assertTrue(item.get("evidence_title"), item["source_id"])
+            self.assertTrue(item.get("source_figure_label"), item["source_id"])
+
     def test_auto_density_stays_inside_source_span(self):
         source_lines = (self.project / "intermediate" / "sections" / "lesson_05.md").read_text(encoding="utf-8").splitlines()
         for node in self.mindmap["root"]["children"]:

@@ -94,6 +94,28 @@ LESSON05_CALLOUTS = {
         },
     ],
 }
+LESSON05_EVIDENCE = {
+    "fig_p32_003": {
+        "evidence_title": "证明：Full Batch 与 Batch=1 更新频率差异",
+        "source_figure_label": "图5-2",
+    },
+    "fig_p38_004": {
+        "evidence_title": "证明：大 Batch 在一个 Epoch 上更省时",
+        "source_figure_label": "图5-3",
+    },
+    "fig_p46_006": {
+        "evidence_title": "证明：Flat Minima 泛化更稳",
+        "source_figure_label": "图5-5",
+    },
+    "fig_p56_007": {
+        "evidence_title": "证明：Momentum 的惯性类比",
+        "source_figure_label": "图5-6",
+    },
+    "fig_p63_008": {
+        "evidence_title": "证明：历史方向 + 当前梯度合成更新方向",
+        "source_figure_label": "图5-7",
+    },
+}
 GREEK_REPLACEMENTS = {
     "η": r"\eta",
     "θ": r"\theta",
@@ -409,6 +431,16 @@ def ensure_visual_callouts(raw: dict[str, Any], asset: dict[str, Any]) -> list[d
     return raw["callouts"]
 
 
+def ensure_evidence_metadata(raw: dict[str, Any], asset: dict[str, Any], effective: str) -> None:
+    if effective == "omit":
+        return
+    source_id = source_id_from(raw)
+    lesson_defaults = LESSON05_EVIDENCE.get(source_id, {})
+    alt = str(raw.get("alt") or asset.get("alt") or source_id or "source figure").strip()
+    raw.setdefault("evidence_title", lesson_defaults.get("evidence_title") or f"图证：{alt}")
+    raw.setdefault("source_figure_label", lesson_defaults.get("source_figure_label") or raw.get("caption") or asset.get("caption") or source_id)
+
+
 def readability_tier_for(source_id: str, decision: str, raw: dict[str, Any], asset: dict[str, Any]) -> str:
     explicit = str(raw.get("readability_tier") or asset.get("readability_tier") or "").strip().lower()
     if explicit:
@@ -435,7 +467,7 @@ def readability_tier_for(source_id: str, decision: str, raw: dict[str, Any], ass
 
 def readability_threshold(tier: str, decision: str) -> tuple[int, int]:
     if tier == "dense":
-        return (230, 135) if decision.startswith("preserve") else (210, 120)
+        return (210, 120) if decision.startswith("preserve") else (210, 120)
     if tier == "medium":
         return 200, 115
     return 170, 96
@@ -471,6 +503,7 @@ def apply_image_policy(outline: dict[str, Any], images_by_id: dict[str, dict[str
         item["min_render_height"] = min_height
         if effective in {"preserve_full", "preserve_crop", "redraw_high_fidelity", "redraw_concept"}:
             ensure_visual_callouts(item, asset)
+            ensure_evidence_metadata(item, asset, effective)
         if effective == "preserve_full":
             item["redraw_required"] = False
             report["preserve_full"].append(source_id)
@@ -1152,6 +1185,7 @@ def resolve_layout_profile(outline: dict[str, Any], manifest: dict[str, Any]) ->
     branch_weights = assign_branch_sides(stats["branch_weights"], mode)
     profile = {
         "mode": mode,
+        "visual_profile": str(outline.get("visual_profile") or existing.get("visual_profile") or ""),
         "density_score": int(existing.get("density_score") or stats["density_score"]),
         "reason": str(existing.get("reason") or generated_reason),
         "branch_weights": branch_weights,
@@ -1205,6 +1239,8 @@ def node_visuals(
                     "id": source_id,
                     "path": image_path_for_markdown(project_path, exports_dir, crop_path),
                     "alt": str(alt),
+                    "evidence_title": str(raw.get("evidence_title") or ""),
+                    "source_figure_label": str(raw.get("source_figure_label") or source_id),
                     "source_path": str(raw.get("path") or asset.get("path") or ""),
                     "callouts": callouts,
                     "readability_tier": tier,
@@ -1222,6 +1258,8 @@ def node_visuals(
                     "kind": effective,
                     "id": source_id,
                     "alt": str(alt),
+                    "evidence_title": str(raw.get("evidence_title") or ""),
+                    "source_figure_label": str(raw.get("source_figure_label") or source_id),
                     "instruction": redraw_instruction(raw, asset),
                     "asset_type": asset_kind(raw, asset) or "screenshot",
                     "template_id": template_id,
@@ -1242,6 +1280,8 @@ def node_visuals(
                 "id": source_id,
                 "path": image_path_for_markdown(project_path, exports_dir, str(path)),
                 "alt": str(alt),
+                "evidence_title": str(raw.get("evidence_title") or ""),
+                "source_figure_label": str(raw.get("source_figure_label") or source_id),
                 "callouts": callouts,
                 "readability_tier": tier,
                 "min_width": str(min_width),
@@ -1377,6 +1417,8 @@ def render_template_redraw_html(visual: dict[str, str]) -> str:
     source_id = html.escape(str(visual.get("id") or ""), quote=True)
     alt = html_text(visual.get("alt") or "SVG redraw")
     instruction = html_text(visual.get("instruction") or "")
+    evidence_title = html_text(visual.get("evidence_title") or visual.get("alt") or "图证")
+    source_label = html_text(visual.get("source_figure_label") or visual.get("id") or "")
     asset_type = html.escape(str(visual.get("asset_type") or "screenshot"), quote=True)
     template_id = html.escape(str(visual.get("template_id") or ""), quote=True)
     kind = html.escape(str(visual.get("kind") or "redraw_concept"), quote=True)
@@ -1385,11 +1427,12 @@ def render_template_redraw_html(visual: dict[str, str]) -> str:
     svg = str(visual.get("svg") or "")
     callouts = render_image_callouts(visual.get("callouts", []) or [])
     return (
-        f'<figure class="balanced-redraw-card" data-source-id="{source_id}" '
+        f'<figure class="balanced-redraw-card balanced-evidence-card" data-source-id="{source_id}" '
         f'data-image-kind="{kind}" data-asset-type="{asset_type}" data-template-id="{template_id}" '
         f'data-min-width="{min_width}" data-min-height="{min_height}" data-redraw-required="true">'
+        f'<div class="balanced-evidence-title">{evidence_title}</div>'
         f"{svg}"
-        f"<figcaption>{instruction}</figcaption>"
+        f'<figcaption><span class="balanced-source-label">{source_label}</span>{instruction}</figcaption>'
         f"{callouts}"
         "</figure>"
     )
@@ -1405,6 +1448,24 @@ def render_image_callouts(callouts: list[dict[str, str]]) -> str:
     if not items:
         return ""
     return '<ul class="balanced-image-callouts">' + "".join(items[:2]) + "</ul>"
+
+
+def render_preserve_image_html(image: dict[str, str]) -> str:
+    src = html.escape(image["path"], quote=True)
+    alt = html_text(image["alt"])
+    evidence_title = html_text(image.get("evidence_title") or image["alt"])
+    source_label = html_text(image.get("source_figure_label") or image.get("id") or "")
+    kind = html.escape(str(image.get("kind") or "preserve"), quote=True)
+    source_id = html.escape(str(image.get("id") or ""), quote=True)
+    min_width = html.escape(str(image.get("min_width") or "170"), quote=True)
+    min_height = html.escape(str(image.get("min_height") or "96"), quote=True)
+    callouts = render_image_callouts(image.get("callouts", []) or [])
+    return (
+        f'<figure class="balanced-preserve-image balanced-evidence-card is-{kind}" data-source-id="{source_id}" '
+        f'data-image-kind="{kind}" data-min-width="{min_width}" data-min-height="{min_height}">'
+        f'<div class="balanced-evidence-title">{evidence_title}</div>'
+        f'<img src="{src}" alt="{alt}"><figcaption><span class="balanced-source-label">{source_label}</span>{alt}</figcaption>{callouts}</figure>'
+    )
 
 
 ICON_SVG = {
@@ -1462,6 +1523,8 @@ def render_node_html(
     classes = ["balanced-node", f"depth-{min(depth, 4)}", f"type-{node_type}"]
     if visuals:
         classes.append("has-visual")
+    if len(visuals) > 1:
+        classes.append("has-multiple-visuals")
     if extra_class:
         classes.append(extra_class)
     attrs = [
@@ -1506,28 +1569,13 @@ def render_node_html(
     if node.get("type") == "table" or node.get("table"):
         parts.append(render_table_html(node))
 
-    images = [visual for visual in visuals if visual.get("kind") in {"preserve_full", "preserve_crop", "preserve", "crop_preserve"}]
-    if images:
-        parts.append('<div class="balanced-images">')
-        for image in images:
-            src = html.escape(image["path"], quote=True)
-            alt = html_text(image["alt"])
-            kind = html.escape(str(image.get("kind") or "preserve"), quote=True)
-            source_id = html.escape(str(image.get("id") or ""), quote=True)
-            min_width = html.escape(str(image.get("min_width") or "170"), quote=True)
-            min_height = html.escape(str(image.get("min_height") or "96"), quote=True)
-            callouts = render_image_callouts(image.get("callouts", []) or [])
-            parts.append(
-                f'<figure class="balanced-preserve-image is-{kind}" data-source-id="{source_id}" '
-                f'data-image-kind="{kind}" data-min-width="{min_width}" data-min-height="{min_height}">'
-                f'<img src="{src}" alt="{alt}"><figcaption>{alt}</figcaption>{callouts}</figure>'
-            )
-        parts.append("</div>")
-    redraws = [visual for visual in visuals if visual.get("kind") in {"redraw_high_fidelity", "redraw_concept", "redraw"}]
-    if redraws:
-        parts.append('<div class="balanced-redraws">')
-        for visual in redraws:
-            parts.append(render_template_redraw_html(visual))
+    if visuals:
+        parts.append('<div class="balanced-evidence-grid">')
+        for visual in visuals:
+            if visual.get("kind") in {"preserve_full", "preserve_crop", "preserve", "crop_preserve"}:
+                parts.append(render_preserve_image_html(visual))
+            elif visual.get("kind") in {"redraw_high_fidelity", "redraw_concept", "redraw"}:
+                parts.append(render_template_redraw_html(visual))
         parts.append("</div>")
 
     children = [child for child in node.get("children", []) or [] if isinstance(child, dict)]
@@ -1613,6 +1661,65 @@ def collect_root_terms(outline: dict[str, Any]) -> list[str]:
     return unique
 
 
+def is_learning_enhancement_node(node: dict[str, Any]) -> bool:
+    title = str(node.get("title") or "")
+    if not title.startswith("[*]"):
+        return False
+    if node.get("type") in {"keywords", "tips"}:
+        return True
+    return bool(node.get("derived") or node.get("grounded_hint"))
+
+
+def collect_learning_band_nodes(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    collected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def visit(node: dict[str, Any]) -> None:
+        node_id = str(node.get("id") or "")
+        if is_learning_enhancement_node(node) and node_id not in seen:
+            seen.add(node_id)
+            collected.append(node)
+            return
+        for child in node.get("children", []) or []:
+            if isinstance(child, dict):
+                visit(child)
+
+    for item in nodes:
+        if isinstance(item, dict):
+            visit(item)
+    return collected
+
+
+def render_learning_band_group(node: dict[str, Any]) -> str:
+    node_id = html.escape(str(node.get("id") or ""), quote=True)
+    title = html_text(str(node.get("title") or "").replace("[*]", "").strip())
+    icon_key = str(node.get("icon") or ("key" if node.get("type") == "keywords" else "wrench"))
+    icon = render_icon_html(icon_key)
+    attrs = [
+        'class="balanced-band-group"',
+        f'data-node-id="{node_id}"',
+        f'data-icon="{html.escape(icon_key, quote=True)}"',
+        'data-derived="true"',
+    ]
+    parts = [f'<div {" ".join(attrs)}><h3>{icon}<span>{title}</span></h3>']
+    terms = node_terms(node)
+    if node.get("type") == "keywords" and terms:
+        parts.append(
+            '<div class="balanced-keyword-pills">'
+            + "".join(f'<span class="keywords-pill">{html_text(term)}</span>' for term in terms)
+            + "</div>"
+        )
+    else:
+        children = [child for child in node.get("children", []) or [] if isinstance(child, dict)]
+        if children:
+            parts.append('<ol class="balanced-band-list">')
+            for child in children[:4]:
+                parts.append(f'<li data-node-id="{html.escape(str(child.get("id") or ""), quote=True)}">{html_text(child.get("title") or "")}</li>')
+            parts.append("</ol>")
+    parts.append("</div>")
+    return "".join(parts)
+
+
 def build_balanced_html(
     outline: dict[str, Any],
     layout_profile: dict[str, Any],
@@ -1627,12 +1734,11 @@ def build_balanced_html(
     weight_by_id = {str(item.get("node_id")): int(item.get("weight") or 0) for item in branch_items}
     left_nodes: list[dict[str, Any]] = []
     right_nodes: list[dict[str, Any]] = []
-    bottom_nodes: list[dict[str, Any]] = []
+    bottom_nodes = collect_learning_band_nodes([node for node in outline.get("nodes", []) or [] if isinstance(node, dict)])
     for node in outline.get("nodes", []) or []:
         if not isinstance(node, dict):
             continue
-        if node.get("type") in {"keywords", "tips"} and str(node.get("title") or "").startswith("[*]"):
-            bottom_nodes.append(node)
+        if is_learning_enhancement_node(node):
             continue
         side = side_by_id.get(str(node.get("id")), "right")
         if side == "left":
@@ -1647,7 +1753,10 @@ def build_balanced_html(
         color = BRANCH_COLORS[index % len(BRANCH_COLORS)] if side == "left" else BRANCH_COLORS[(index + 1) % len(BRANCH_COLORS)]
         weight = weight_by_id.get(node_id, 0)
         dominant = " is-dominant" if weight == max_weight and weight > 0 else ""
-        children = [child for child in node.get("children", []) or [] if isinstance(child, dict)]
+        children = [
+            child for child in node.get("children", []) or []
+            if isinstance(child, dict) and not is_learning_enhancement_node(child)
+        ]
         child_html = "".join(
             render_node_html(child, 1, outline, images_by_id, project_path, exports_dir)
             for child in children
@@ -1677,11 +1786,12 @@ def build_balanced_html(
     def render_bottom(nodes: list[dict[str, Any]]) -> str:
         if not nodes:
             return ""
-        body = "".join(
-            render_node_html(node, 1, outline, images_by_id, project_path, exports_dir, extra_class="balanced-bottom-node")
-            for node in nodes
+        body = "".join(render_learning_band_group(node) for node in nodes)
+        return (
+            '<section class="balanced-learning-band" aria-label="学习增强带" data-derived="true">'
+            '<div class="balanced-band-title">学习增强带</div>'
+            f"{body}</section>"
         )
-        return f'<section class="balanced-bottom" aria-label="derived grounded strips">{body}</section>'
 
     root_summary = html_text(outline.get("core_question") or outline.get("description") or outline.get("source_title") or "")
     root_terms = collect_root_terms(outline)
@@ -1856,7 +1966,7 @@ def main(argv: list[str] | None = None) -> int:
         source_text = ctx["source"].read_text(encoding="utf-8") if ctx["source"].exists() else ""
         apply_section_fidelity(outline)
         if is_lesson05_source(source_text):
-            outline["visual_profile"] = "gpt_image2_inspired_source_faithful"
+            outline["visual_profile"] = "compact_learning_poster"
             outline["core_question"] = "核心主题：Batch（批次）与 Momentum（动量）"
             replace_children_with_learning_points(outline, source_text)
             ensure_derived_learning_nodes(outline, source_text)

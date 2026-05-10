@@ -23,6 +23,7 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Root should be visually strongest.
 - For GPT Image 2 inspired source-faithful maps, the root is a large center card with the exact source lesson title and a short source-grounded learning question.
 - For `source_faithful_poster` or `gpt_image2_inspired_source_faithful`, keep the canvas compact enough to feel like a finished learning poster rather than an infinite whiteboard screenshot.
+- For `compact_learning_poster`, target a finished poster ratio close to 16:9 or 4:3. The center card stays large, branches sit close to the center, and the final SVG/PNG should avoid tall whiteboard screenshots.
 - Level 1 nodes use accent color.
 - Level 2 and leaves use white or light tinted fills.
 - Images should appear near the node they explain, not near the root.
@@ -36,7 +37,8 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Connect child cards back to the H2 branch hub with same-color thin connectors so cards do not appear to float independently.
 - Keep connector strokes lower-contrast than content cards; images, formulas, and numbered details must carry the visual emphasis.
 - Render keyword nodes (`[*] 关键词`) as a bottom capsule strip; do not give them invented source numbers.
-- Render retained/redrawn images as grouped learning callouts: visual first, then 1 to 2 short source-backed conclusions next to or under the visual.
+- Render retained/redrawn images as evidence cards: `evidence_title`, image/redraw, source figure label, then 1 to 2 short source-backed conclusions.
+- Merge keywords, tuning hints, and derived Momentum advantages into one bottom `学习增强带`; do not scatter them across branches or number them as source chapters.
 - Render node icons from `icon` metadata as small inline line icons before the title. Use the established mapping: Batch=`database`, definition=`file-text`, efficiency=`gauge`, generalization=`line-chart`, comparison=`scale`, Momentum=`running`, concept=`lightbulb`, algorithm=`settings`, summary=`list-checks`, keywords=`key`, tuning=`wrench`.
 
 ## Adaptive Layout
@@ -68,8 +70,19 @@ Lesson 5 preferred balance:
 - bottom: `[*] 关键词` and optional `[*] 调参启示` only when grounded
 - Batch branch details should use compact numbered lists for definition, efficiency, generalization, and the comparison table.
 - Momentum branch should keep the formula card close to the visual that explains `当前梯度 + 历史方向`.
-- Derived Momentum advantages may appear as `[*] Momentum 优势（派生）` under Momentum, but must carry `derived_from` metadata and no source-style number.
+- Derived Momentum advantages should join the bottom learning band with keywords and tuning hints, carry `derived_from` metadata, and use no source-style number.
 - Never add fake visual-only source numbers such as `5.2.3`, `5.4`, or `5.5`; derived keyword and tuning nodes must keep the `[*]` prefix.
+
+## Poster Quality Gates
+
+Compact poster validation should check:
+
+- final rendered aspect ratio is in a poster range, preferably near 16:9 or 4:3;
+- center card is close to canvas center;
+- branch hubs stay within a maximum distance from the center;
+- bottom learning band height is no more than 12-15% of canvas height;
+- evidence cards have readable rendered area;
+- connector strokes are thin/low-opacity and do not cross the center card body.
 
 ## Content Rules
 

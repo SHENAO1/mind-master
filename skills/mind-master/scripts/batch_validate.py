@@ -808,6 +808,131 @@ def check_layout_readability(mindmap: dict[str, Any], paths: dict[str, Path]) ->
     }
 
 
+def check_layout_aesthetics(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "layout aesthetics applies to balanced poster layouts"}
+    metrics = browser.get("layoutAesthetics") or {}
+    failures: list[str] = []
+    def num(value: Any, default: float = 0.0) -> float:
+        return default if value is None else float(value)
+
+    aspect = num(metrics.get("aspectRatio"))
+    if not (1.25 <= aspect <= 1.90):
+        failures.append(f"aspect ratio {aspect:.3f} is outside poster range 1.25-1.90")
+    blank_ratio = num(metrics.get("blankRatio"), 1.0)
+    if blank_ratio > 0.74:
+        failures.append(f"blank ratio {blank_ratio:.3f} is too high")
+    offset = metrics.get("rootCenterOffset") or {}
+    if num(offset.get("xRatio"), 1.0) > 0.08 or num(offset.get("yRatio"), 1.0) > 0.13:
+        failures.append("root card is not close enough to canvas center")
+    if num(metrics.get("maxBranchDistanceRatio"), 1.0) > 0.43:
+        failures.append("branch hubs are too far from the center card")
+    band_ratio = num(metrics.get("bottomBandHeightRatio"))
+    if band_ratio <= 0 or band_ratio > 0.15:
+        failures.append(f"bottom learning band height ratio {band_ratio:.3f} is outside 0-0.15")
+    return {"passed": not failures, "metrics": metrics, "failures": failures}
+
+
+def active_figure_decisions(mindmap: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        item for item in mindmap.get("figure_decisions", []) or []
+        if isinstance(item, dict) and str(item.get("decision") or "") in (ALLOWED_FIGURE_DECISIONS - {"omit"})
+    ]
+
+
+def check_evidence_card_quality(mindmap: dict[str, Any], source_text: str, browser: dict[str, Any]) -> dict[str, Any]:
+    rendered = {
+        str(card.get("sourceId") or ""): card
+        for card in browser.get("evidenceCards", []) or []
+        if isinstance(card, dict)
+    }
+    failures: list[dict[str, Any]] = []
+    for item in active_figure_decisions(mindmap):
+        source_id = str(item.get("source_id") or item.get("id") or "")
+        if not str(item.get("evidence_title") or "").strip():
+            failures.append({"source_id": source_id, "reason": "missing evidence_title"})
+        callouts = [callout for callout in item.get("callouts", []) or [] if isinstance(callout, dict)]
+        if not callouts:
+            failures.append({"source_id": source_id, "reason": "missing callout"})
+        for callout in callouts:
+            quote = str(callout.get("source_quote") or "")
+            if not source_quote_found(quote, source_text):
+                failures.append({"source_id": source_id, "reason": "callout source_quote not found", "source_quote": quote})
+        card = rendered.get(source_id)
+        if browser and not browser.get("skipped") and not card:
+            failures.append({"source_id": source_id, "reason": "evidence card not rendered"})
+        if card:
+            if not card.get("hasEvidenceTitle"):
+                failures.append({"source_id": source_id, "reason": "rendered card missing evidence title"})
+            if int(card.get("calloutCount") or 0) < 1:
+                failures.append({"source_id": source_id, "reason": "rendered card missing source-backed callout"})
+            if not card.get("hasSourceLabel"):
+                failures.append({"source_id": source_id, "reason": "rendered card missing source figure label"})
+            min_width = int(item.get("min_render_width") or 0)
+            min_height = int(item.get("min_render_height") or 0)
+            if min_width and float(card.get("width") or 0) < min_width:
+                failures.append({"source_id": source_id, "reason": "rendered evidence width below threshold", "width": card.get("width"), "min_width": min_width})
+            if min_height and float(card.get("height") or 0) < min_height:
+                failures.append({"source_id": source_id, "reason": "rendered evidence height below threshold", "height": card.get("height"), "min_height": min_height})
+    return {"passed": not failures, "checked": len(active_figure_decisions(mindmap)), "failures": failures}
+
+
+def check_bottom_learning_band(root: dict[str, Any], browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "bottom learning band applies to balanced poster layouts"}
+    expected_ids = {
+        str(node.get("id"))
+        for node, _ in flatten_nodes(root)
+        if str(node.get("title") or "").startswith("[*]") and (node.get("derived") or node.get("grounded_hint"))
+    }
+    data = browser.get("bottomLearningBand") or {}
+    rendered_ids = {str(item) for item in data.get("nodeIds", []) or [] if item}
+    failures: list[str] = []
+    if expected_ids and not data.get("present"):
+        failures.append("bottom learning band is missing")
+    missing = sorted(expected_ids - rendered_ids)
+    if missing:
+        failures.append("derived learning nodes missing from bottom band: " + ", ".join(missing))
+    scattered = [item for item in data.get("scatteredEnhancements", []) or [] if item]
+    if scattered:
+        failures.append("derived learning nodes are scattered outside bottom band: " + ", ".join(scattered))
+    height_ratio = float(data.get("heightRatio") or 0)
+    if expected_ids and (height_ratio <= 0 or height_ratio > 0.15):
+        failures.append(f"bottom band height ratio {height_ratio:.3f} is outside 0-0.15")
+    numbered = []
+    for node, _ in flatten_nodes(root):
+        if str(node.get("id")) in expected_ids and section_id_from_heading(str(node.get("title") or "").replace("[*]", "").strip()):
+            numbered.append(str(node.get("id")))
+    if numbered:
+        failures.append("derived nodes use source-style numbering: " + ", ".join(numbered))
+    return {"passed": not failures, "expected_ids": sorted(expected_ids), "rendered_ids": sorted(rendered_ids), "metrics": data, "failures": failures}
+
+
+def check_connector_noise(browser: dict[str, Any]) -> dict[str, Any]:
+    if browser.get("skipped"):
+        return {"passed": True, "skipped": True, "reason": browser.get("reason", "browser skipped")}
+    if browser.get("layoutMode") != "balanced_two_sided":
+        return {"passed": True, "skipped": True, "reason": "connector noise applies to balanced poster layouts"}
+    metrics = browser.get("connectorMetrics") or {}
+    failures: list[str] = []
+    count = int(metrics.get("count") or 0)
+    if browser.get("layoutMode") == "balanced_two_sided" and not count:
+        failures.append("balanced poster has no connector paths")
+    if count > 18:
+        failures.append(f"connector count {count} is too high")
+    if float(metrics.get("maxStrokeWidth") or 0) > 4.0:
+        failures.append(f"connector stroke {metrics.get('maxStrokeWidth')} is too thick")
+    if float(metrics.get("maxOpacity") or 0) > 0.45:
+        failures.append(f"connector opacity {metrics.get('maxOpacity')} is too strong")
+    if int(metrics.get("rootIntersections") or 0) > 0:
+        failures.append("connector path intersects the center card body")
+    return {"passed": not failures, "metrics": metrics, "failures": failures}
+
+
 def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
     required = [
         "heading_coverage",
@@ -1014,12 +1139,86 @@ const timeout = Number(process.argv[3] || 60000);
       document.querySelector('.markmap svg');
   }, { timeout });
   await page.waitForTimeout(5000);
-  const result = await page.evaluate(() => {
+    const result = await page.evaluate(() => {
     const layoutMode = document.body.dataset.layoutMode || 'vertical';
     const target = layoutMode === 'balanced_two_sided'
       ? document.querySelector('.balanced-layout')
       : document.querySelector('.markmap svg');
     const box = target ? target.getBoundingClientRect() : null;
+    const layout = document.querySelector('.balanced-layout');
+    const root = layout ? layout.querySelector('.balanced-root') : null;
+    const bottomBand = layout ? layout.querySelector('.balanced-learning-band') : null;
+    const rectObj = (rect) => rect ? ({
+      left: Math.round(rect.left),
+      top: Math.round(rect.top),
+      right: Math.round(rect.right),
+      bottom: Math.round(rect.bottom),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      cx: Math.round(rect.left + rect.width / 2),
+      cy: Math.round(rect.top + rect.height / 2)
+    }) : null;
+    const layoutRect = layout ? layout.getBoundingClientRect() : null;
+    const rootRect = root ? root.getBoundingClientRect() : null;
+    const bottomRect = bottomBand ? bottomBand.getBoundingClientRect() : null;
+    const posterNodes = layout ? Array.from(layout.querySelectorAll('.balanced-root, .balanced-node, .balanced-learning-band')) : [];
+    const occupiedArea = posterNodes.reduce((sum, el) => {
+      const r = el.getBoundingClientRect();
+      return sum + Math.max(0, r.width) * Math.max(0, r.height);
+    }, 0);
+    const layoutArea = layoutRect ? layoutRect.width * layoutRect.height : 0;
+    const rootCenterOffset = layoutRect && rootRect ? {
+      x: Math.abs((rootRect.left + rootRect.width / 2) - (layoutRect.left + layoutRect.width / 2)),
+      y: Math.abs((rootRect.top + rootRect.height / 2) - (layoutRect.top + layoutRect.height / 2)),
+      xRatio: Math.abs((rootRect.left + rootRect.width / 2) - (layoutRect.left + layoutRect.width / 2)) / layoutRect.width,
+      yRatio: Math.abs((rootRect.top + rootRect.height / 2) - (layoutRect.top + layoutRect.height / 2)) / layoutRect.height
+    } : null;
+    const branchDistances = layout && rootRect ? Array.from(layout.querySelectorAll('.balanced-hub')).map((hub) => {
+      const r = hub.getBoundingClientRect();
+      const dx = Math.abs((r.left + r.width / 2) - (rootRect.left + rootRect.width / 2));
+      const dy = Math.abs((r.top + r.height / 2) - (rootRect.top + rootRect.height / 2));
+      return Math.round(Math.sqrt(dx * dx + dy * dy));
+    }) : [];
+    const enhancementIds = ['n_keywords', 'n_tuning_hints', 'n_momentum_advantages'];
+    const scatteredEnhancements = layout ? enhancementIds.filter((id) => {
+      const el = layout.querySelector(`[data-node-id="${id}"]`);
+      return el && !el.closest('.balanced-learning-band');
+    }) : [];
+    const evidenceCards = Array.from(document.querySelectorAll('.balanced-evidence-card')).map((figure) => {
+      const media = figure.querySelector('img, svg');
+      const rect = media ? media.getBoundingClientRect() : figure.getBoundingClientRect();
+      return {
+        sourceId: figure.dataset.sourceId || '',
+        kind: figure.dataset.imageKind || '',
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        area: Math.round(rect.width * rect.height),
+        hasEvidenceTitle: !!figure.querySelector('.balanced-evidence-title'),
+        calloutCount: figure.querySelectorAll('.balanced-image-callouts li[data-source-quote]').length,
+        hasSourceLabel: !!figure.querySelector('.balanced-source-label')
+      };
+    });
+    const connectors = Array.from(document.querySelectorAll('.balanced-live-connectors path')).map((path) => {
+      const width = Number(path.getAttribute('stroke-width') || 0);
+      const opacity = Number(path.getAttribute('opacity') || getComputedStyle(path).opacity || 0);
+      let intersectsRoot = false;
+      if (rootRect && layoutRect && path.getBBox) {
+        const b = path.getBBox();
+        const inner = {
+          left: rootRect.left - layoutRect.left + 10,
+          right: rootRect.right - layoutRect.left - 10,
+          top: rootRect.top - layoutRect.top + 10,
+          bottom: rootRect.bottom - layoutRect.top - 10
+        };
+        intersectsRoot = b.x < inner.right && b.x + b.width > inner.left && b.y < inner.bottom && b.y + b.height > inner.top;
+      }
+      return {
+        kind: path.dataset.kind || '',
+        strokeWidth: width,
+        opacity,
+        intersectsRoot
+      };
+    });
     const imageReadability = Array.from(document.querySelectorAll('[data-image-kind]')).map((figure) => {
       const media = figure.querySelector('img, svg');
       const rect = media ? media.getBoundingClientRect() : figure.getBoundingClientRect();
@@ -1041,7 +1240,33 @@ const timeout = Number(process.argv[3] || 60000);
       svgWidth: box ? Math.round(box.width) : 0,
       svgHeight: box ? Math.round(box.height) : 0,
       textLength: document.body.innerText.length,
-      imageReadability
+      imageReadability,
+      layoutAesthetics: {
+        layout: rectObj(layoutRect),
+        root: rectObj(rootRect),
+        bottomBand: rectObj(bottomRect),
+        aspectRatio: layoutRect ? Number((layoutRect.width / layoutRect.height).toFixed(3)) : 0,
+        blankRatio: layoutArea ? Number(Math.max(0, 1 - Math.min(occupiedArea / layoutArea, 1)).toFixed(3)) : 1,
+        rootCenterOffset,
+        branchDistances,
+        maxBranchDistance: branchDistances.length ? Math.max(...branchDistances) : 0,
+        maxBranchDistanceRatio: layoutRect && branchDistances.length ? Number((Math.max(...branchDistances) / layoutRect.width).toFixed(3)) : 0,
+        bottomBandHeightRatio: layoutRect && bottomRect ? Number((bottomRect.height / layoutRect.height).toFixed(3)) : 0
+      },
+      evidenceCards,
+      bottomLearningBand: {
+        present: !!bottomBand,
+        nodeIds: bottomBand ? Array.from(bottomBand.querySelectorAll('[data-node-id]')).map((el) => el.dataset.nodeId || '') : [],
+        scatteredEnhancements,
+        heightRatio: layoutRect && bottomRect ? Number((bottomRect.height / layoutRect.height).toFixed(3)) : 0
+      },
+      connectorMetrics: {
+        count: connectors.length,
+        maxStrokeWidth: connectors.length ? Math.max(...connectors.map(c => c.strokeWidth)) : 0,
+        maxOpacity: connectors.length ? Math.max(...connectors.map(c => c.opacity)) : 0,
+        rootIntersections: connectors.filter(c => c.intersectsRoot && c.kind !== 'root-branch').length,
+        connectors
+      }
     };
   });
   result.pageErrors = errors;
@@ -1170,6 +1395,11 @@ def main(argv: list[str] | None = None) -> int:
                 checks["browser"]["reason"] = "Source contains display formulas but rendered HTML has no KaTeX nodes."
             if checks["browser"].get("skipped"):
                 warnings.append(str(checks["browser"].get("reason", "Browser validation skipped.")))
+
+        checks["layout_aesthetics"] = check_layout_aesthetics(checks["browser"])
+        checks["evidence_card_quality"] = check_evidence_card_quality(mindmap, source_text, checks["browser"])
+        checks["bottom_learning_band"] = check_bottom_learning_band(root, checks["browser"])
+        checks["connector_noise"] = check_connector_noise(checks["browser"])
 
         for name, check in checks.items():
             if isinstance(check, dict) and not check.get("passed", False):

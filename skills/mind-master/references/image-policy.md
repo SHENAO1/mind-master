@@ -169,6 +169,25 @@ Rules:
 - Do not use general ML knowledge as a callout.
 - If no grounded callout can be found, omit the figure.
 
+## Evidence Cards
+
+Learning-poster layouts render every non-omitted figure as a `图证卡` instead of a plain thumbnail.
+
+Required fields:
+
+- `evidence_title`: one short source-faithful claim that states what the figure proves.
+- `source_figure_label`: the original figure label such as `图5-3`.
+- image or registered high-fidelity redraw.
+- 1 to 2 source-backed callouts.
+
+Lesson 5 evidence titles:
+
+- `fig_p38_004`: `证明：大 Batch 在一个 Epoch 上更省时`
+- `fig_p46_006`: `证明：Flat Minima 泛化更稳`
+- `fig_p56_007`: `证明：Momentum 的惯性类比`
+- `fig_p63_008`: `证明：历史方向 + 当前梯度合成更新方向`
+- `fig_p32_003`: `证明：Full Batch 与 Batch=1 更新频率差异`
+
 ## Selection Rules
 
 Keep an image when:

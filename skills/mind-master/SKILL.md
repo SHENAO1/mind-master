@@ -51,6 +51,7 @@ DOCX/PDF
 13. Every retained or redrawn figure must include 1 to 2 `callouts`, each with a short conclusion and a `source_quote` found in the active source.
 14. Learning-poster profiles render paragraph evidence as compact numbered short sentences. Do not cut English words when shortening; keep full `source_quote` / `source_span` for validation.
 15. Course-note nodes should carry `icon` metadata when the node type is recognizable, using simple line icons such as `database`, `file-text`, `gauge`, `line-chart`, `scale`, `running`, `lightbulb`, `settings`, `list-checks`, `key`, and `wrench`.
+16. Compact learning poster layouts must render retained/redrawn figures as evidence cards with `evidence_title`, source figure label, image/redraw, and source-backed callouts. Keywords, Momentum advantages, and tuning hints must merge into one bottom learning band, not scatter as fake numbered sections.
 
 ## Required References
 

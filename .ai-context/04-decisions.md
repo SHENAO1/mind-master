@@ -26,6 +26,22 @@
 
 ---
 
+## 2026-05-10 · Compact learning poster 版面质量门禁
+
+**背景**: 第 5 节已经具备 source_quote、图像决策、图像 callout、派生节点和图片可读性校验，但导出仍偏高、留白多，像无限白板截图而不是成品学习海报。用户要求强化中心、收拢分支、合并底部派生内容，并让版面质量可自动验证。
+
+**选项**:
+- A: 只调整 CSS，让导图“看起来更紧凑”，不增加结构字段和校验。
+- B: 引入 `compact_learning_poster` 视觉 profile，图像渲染为 evidence card，派生学习内容合并为 bottom learning band，并在 `batch_validate.py` 增加 layout/evidence/bottom/connector 四类版面门禁。
+
+**决策**: 选择 B。
+
+**理由**: 成品级学习海报的风险不只是内容缺失，还包括比例失控、中心偏移、连接线抢眼、图片不可读和派生内容散落。把这些指标写进浏览器实测校验，能让后续第 6-8 节复用同一版面质量标准。
+
+**影响**: 更新 `render_mindmap.py`、`templates/markmap.html`、`batch_validate.py`、Skill/reference 和回归测试。`lesson_05` 最新 SVG 视口为 `2100x1627`，底栏高度占比 `0.086`，最大分支距离占比 `0.182`；新增 `layout_aesthetics`、`evidence_card_quality`、`bottom_learning_band`、`connector_noise` 校验。
+
+**状态**: 生效
+
 ## 2026-05-10 · Source-faithful learning poster 节点压缩与派生元数据
 
 **背景**: 第 5 节已具备五类图片决策、裁剪、callout 和图片可读性校验，但节点仍偏“文档摘要”，中心主题、图标体系、短编号句和派生学习内容没有进入可验证数据结构。用户要求吸收 GPT Image 2 参考图的表达方式，同时禁止伪造原文不存在的 `5.2.3`、`5.4`、`5.5` 等章节编号。
