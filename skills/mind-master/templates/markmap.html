@@ -1041,7 +1041,11 @@
       const gap = Math.max(4, Math.abs(end.x - start.x));
       const gutterX = start.x + sign * Math.min(4, Math.max(3, gap / 8));
       const base = [start, { x: gutterX, y: start.y }, { x: gutterX, y: end.y }, end];
-      if (!routeIntersectsObstacles(base, obstacles)) {
+      const directBlockers = obstacles.filter((rect) => {
+        return routeIntersectsObstacles(base, [rect]) ||
+          segmentIntersectsRect({ x: gutterX, y: end.y }, end, rect, 8);
+      });
+      if (!directBlockers.length) {
         return base;
       }
       const corridorMin = Math.min(gutterX, end.x) - 4;
@@ -1052,13 +1056,35 @@
       }
       const minTop = Math.min(...blockers.map((rect) => rect.top));
       const maxBottom = Math.max(...blockers.map((rect) => rect.bottom));
-      const wantsLowerRoute = end.y >= start.y;
+      const wantsLowerRoute = end.y > start.y + 18;
       const bottomLimit = layoutRect.height - 18;
       const topCandidate = Math.max(10, minTop - 10);
       const bottomCandidate = Math.min(bottomLimit, maxBottom + 10);
       const detourY = wantsLowerRoute || topCandidate < 12 ? bottomCandidate : topCandidate;
       const detour = [start, { x: gutterX, y: start.y }, { x: gutterX, y: detourY }, { x: end.x, y: detourY }, end];
-      return routeIntersectsObstacles(detour, obstacles) ? base : detour;
+      return detour;
+    }
+    function rootBranchRoute(start, end, side, obstacles, layoutRect) {
+      const base = connectorRoute(start, end, side, 'root-h2');
+      if (!routeIntersectsObstacles(base, obstacles)) {
+        return base;
+      }
+      const sideObstacles = obstacles.filter((rect) => side === 'left' ? rect.right <= start.x : rect.left >= start.x);
+      if (!sideObstacles.length) {
+        return base;
+      }
+      const nearX = side === 'left'
+        ? Math.min(start.x - 4, Math.max(...sideObstacles.map((rect) => rect.right)) + 8)
+        : Math.max(start.x + 4, Math.min(...sideObstacles.map((rect) => rect.left)) - 8);
+      const near = [start, { x: nearX, y: start.y }, { x: nearX, y: end.y }, end];
+      if (!routeIntersectsObstacles(near, obstacles)) {
+        return near;
+      }
+      const outsideX = side === 'left'
+        ? Math.max(8, Math.min(...sideObstacles.map((rect) => rect.left)) - 12)
+        : Math.min(layoutRect.width - 8, Math.max(...sideObstacles.map((rect) => rect.right)) + 12);
+      const outside = [start, { x: outsideX, y: start.y }, { x: outsideX, y: end.y }, end];
+      return outside;
     }
     function shiftedDotPoint(point, side, target) {
       const offset = target ? 3.4 : 2.2;
@@ -1130,9 +1156,12 @@
         const hubPortSide = side === 'left' ? 'right' : 'left';
         const rootStart = edgePort(rootRect, rootPortSide, hubRect.cy, 26);
         const hubEnd = edgePort(hubRect, hubPortSide, rootStart.y, 18);
+        const rootObstacles = Array.from(layout.querySelectorAll('.balanced-branch .balanced-hub'))
+          .filter((candidate) => candidate !== hub)
+          .map((candidate) => rectInLayout(candidate, layoutRect));
         appendConnector(
           svg,
-          connectorRoute(rootStart, hubEnd, side, 'root-h2'),
+          rootBranchRoute(rootStart, hubEnd, side, rootObstacles, layoutRect),
           color,
           'root-h2',
           side,

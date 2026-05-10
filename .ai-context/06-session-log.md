@@ -19,6 +19,18 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 按用户要求整理当前 Mind-Master Skill 的 GitHub 展示材料：将 `README.md` 改为中文首页说明，并同步 `README_CN.md`；内容覆盖当前能力、适用场景、快速开始、章节导图流程、项目工作区、Skill 结构、质量门禁、隐私边界和待补项。继续保留上一轮 `markmap.html` balanced connector 避障修复。
+**进行中 / In progress**: 已重新运行 `python -m unittest discover -s skills/mind-master/tests -p "test_*.py"`，14 项通过；已重新运行 `batch_validate.py projects/ml_theory2_test --section-id lesson_06`，第 6 节门禁通过。准备提交并推送到 GitHub 仓库 `SHENAO1/mind-master`，并设置仓库中文简介。
+**下一步建议 / Next**: 推送后继续补一个可公开的 `examples/` 示例，避免直接提交 ignored 的真实课程测试项目；随后用同一 Skill 链路生成 `lesson_07`、`lesson_08`。
+**注意 / Watch out**: README 已按当前真实脚本收敛，不再把尚未存在的 `pdf_to_md.py`、`web_to_md.py`、`screenshot_capture.py` 写成已落地能力；PDF/Web/OCR 仍列为待补项。
+
+## 2026-05-10 · Codex
+**完成 / Done**: 按用户要求使用现有 Mind-Master Skill 生成第 6 节 `lesson_06` compact learning poster。重写 `maps/lesson_06/intermediate/outline.json`，覆盖 6.1-6.5 与 6.2/6.3 子节，保留 Adagrad、RMS Prop、Adam、LR Scheduling/Warm Up 等核心公式；7 张源图中 5 张以 `preserve_crop` 图证卡呈现，2 张 omit，并带 source-backed callout/crop metadata。
+**进行中 / In progress**: 已运行 `render_mindmap.py`、`export_mindmap.py`、`batch_validate.py` 和 `python -m unittest discover -s skills/mind-master/tests -p "test_*.py"`。HTML/SVG/PNG/PDF 已导出到 `projects/ml_theory2_test/maps/lesson_06/exports/`；最终 `batch_validate.py` 通过，14 项 unittest 通过。为通过第 6 节多图/多公式布局，`markmap.html` 的 balanced connector routing 新增同排上绕与根节点窄走廊避障。
+**下一步建议 / Next**: 用同一 Skill 链路继续生成 `lesson_07`、`lesson_08`，重点观察多公式/多图章节的裁剪质量、连接线避障和底部学习增强带密度。
+**注意 / Watch out**: `projects/ml_theory2_test/` 产物仍被 git 忽略，普通 `git status` 只会显示模板/上下文文件改动；第 6 节当前没有改架构或新增依赖，`04-decisions.md` 无需更新。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 修复 `lesson_05` compact learning poster 的连接线语义与图证卡溢出问题。root/H2/H3 节点新增 `data-node-id`、`data-parent-id`、`data-connector-role`、`data-side`；连接线改为父子边缘端口折线、endpoint dots，并通过 gutter/detour 绕开兄弟卡。图证卡统一 containment，`fig_p38_004` 改为图片优先、callout chips 卡内下方两列，overlay chips 限制在 media 内。新增 10 个 connector/containment/overflow 浏览器校验并更新 Skill/reference/tests。
 **进行中 / In progress**: 已完整重跑 `extract_assets.py`、`render_mindmap.py`、`export_mindmap.py`、`batch_validate.py` 和 unittest；HTML/SVG/PNG/PDF 均正常导出。最终 SVG 视口 `2240x1200`、PNG `4480x2400`、PDF 为单页 PNG PDF。连接线 `count=11`、`maxStrokeWidth=2.5`、`crossingCount=0`、`outsideCardRatio=1.0`；`fig_p38_004` 卡片 325x211、media 311x132、chip/overlay/caption 溢出均为 0。
 **下一步建议 / Next**: 将 connector metadata/port routing 与 evidence containment 规则推广到第 6-8 节，尤其观察多图、多公式章节下 gutter detour 是否需要更通用的避障策略。

@@ -4,7 +4,7 @@
 
 **最近更新**: 2026-05-10
 
-> Mind-Master 已完成正式渲染/验证/导出闭环，并把第 5 节升级为更紧凑的 compact learning poster：包含五类图片决策、source-backed callout、图标元数据、派生节点标记、图证卡 containment、重点图 overlay metadata、语义端口连接线、三栏学习增强带和 poster packing 校验；当前重点是把同一能力产品化并扩展到第 6-8 节。
+> Mind-Master 已完成正式渲染/验证/导出闭环，并把第 5、6 节升级为 compact learning poster：包含五类图片决策、source-backed callout、图证卡 containment、语义端口连接线、三栏学习增强带和 poster packing 校验；当前重点是把同一能力继续扩展到第 7-8 节。
 
 ## ✅ Done
 - 仓库基础文件已建立：`README.md`、`README_CN.md`、`.env.example`、`.gitignore`、`requirements.txt`。
@@ -45,15 +45,16 @@
 - 2026-05-10 继续把 `lesson_05` 压缩为成品级学习海报：导出裁切到 `.balanced-layout`，SVG 视口 `2360x1331`，比例 `1.773`；新增 `poster_packing`、`batch_height_compactness`、`evidence_compactness`、`learning_band_compactness` 全部通过。`fig_p32_003` 与 `fig_p38_004` 已并排图证，`fig_p46_006` 裁剪收紧，表 5-1 改为 compact comparison matrix，学习增强带固定三栏且只渲染 10 个关键词。
 - 2026-05-10 本轮继续压缩 `lesson_05`：SVG 视口改为 `2240x1200`，Batch 左侧实际高度约从 `1168px` 降到 `944px`；表 5-1 可与 5.1.3 并排，重点图 `fig_p38_004`、`fig_p46_006`、`fig_p63_008` 增加 source-backed overlay highlights，并新增 `evidence_overlay_metadata` 校验。最新 `batch_validate.py` 与 14 项 unittest 均通过。
 - 2026-05-10 本轮修复 `lesson_05` 连接线语义与图证卡溢出：root/H2/H3 写出 `data-node-id`、`data-parent-id`、`data-connector-role`、`data-side`；连接线改为端口折线 + endpoint dots，并绕开兄弟卡/图证卡。`fig_p38_004` 改为图片优先、callout chips 位于卡内下方，overlay chips 限制在 media 内；新增 connector clarity 与 evidence containment/overflow 校验全部通过。最新 `extract_assets.py`、`render_mindmap.py`、`export_mindmap.py`、`batch_validate.py` 和 14 项 unittest 均通过。
+- 2026-05-10 已用现有 Mind-Master Skill 生成并导出 `lesson_06`：第 6 节覆盖 6.1-6.5 与 6.2/6.3 子节，保留 4 组核心公式，5 张源图以 `preserve_crop` 图证卡呈现，2 张图按策略 omit；HTML/SVG/PNG/PDF 位于 `projects/ml_theory2_test/maps/lesson_06/exports/`。为通过多图多公式场景，`markmap.html` 的 balanced connector 路由新增同排上绕与根节点窄走廊避障；`batch_validate.py` 与 14 项 unittest 均通过。
+- 2026-05-10 已将 GitHub 首页文档改为中文 README：`README.md` 与 `README_CN.md` 同步描述当前已落地能力、快速开始、章节导图流程、Skill 结构、质量门禁、隐私边界和待补项；同时准备将当前 Skill 提交并推送到 `SHENAO1/mind-master`。
 
 ## ⏭️ Next
-- 下一轮应继续把 `lesson_05` 的 source-faithful compact poster 规则产品化，减少 lesson-specific 手工规则，并把第 6-8 节纳入五类图片策略、callout、派生节点标记、poster packing、connector clarity 和 evidence containment 回归。
+- 下一轮应继续把 `lesson_05`/`lesson_06` 的 source-faithful compact poster 规则产品化，减少 lesson-specific 手工规则，并把第 7-8 节纳入五类图片策略、callout、派生节点标记、poster packing、connector clarity 和 evidence containment 回归。
 - 后续可继续细调 `lesson_05` 的区域式留白感，例如根据真实 bbox 做局部重排，而不是再牺牲 source fidelity 或新增伪章节。
 - 后续可把本轮 overlay metadata 与更紧凑 Batch matrix 规则抽象成非 lesson-specific 策略，避免只对第 5 节硬编码。
-- 后续可将 compact learning poster 的四类版面门禁推广到 `lesson_06`-`lesson_08`，观察多公式/多图章节是否需要分章节阈值或更多 evidence card 模板。
-- 下一轮可把同一 profile 应用于第 6-8 节，重点观察多公式、多图章节下 `preserve_crop` 的裁剪质量和伪章节编号校验是否过严。
-- 继续复核第 6 节并用新的 `layout_profile` 链路重生成，确认多公式、多图场景下校验仍可靠。
+- 后续可将 compact learning poster 的四类版面门禁推广到 `lesson_07`-`lesson_08`，观察多公式/多图章节是否需要分章节阈值或更多 evidence card 模板。
 - 继续用同一方式生成 `lesson_07`、`lesson_08`；每节课输出到 `projects/ml_theory2_test/maps/<section_id>/exports/`。
+- 推送后可继续补公开示例目录，避免把 ignored 的 `projects/ml_theory2_test/` 私有测试产物直接提交到仓库。
 - 公式初筛发现 14 条可能需要清洗，主要是希腊字母/算子 Unicode 和公式编号 `#` 的组合。
 - 查看 sample v2 产物：`projects/sample/intermediate/outline.json`、`mindmap.json`、`mindmap_v2.md`、`v2_self_check.md`、`validation.json`，以及 `projects/sample/exports/sample.html/svg/png/pdf`。
 - 每个文档应继续使用独立 `projects/<project_name>/`，不要把导图结果写到仓库根目录；当前 `projects/*` 默认被 git 忽略。
