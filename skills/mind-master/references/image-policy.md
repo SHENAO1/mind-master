@@ -78,7 +78,7 @@ Failure conditions:
 
 Recommended Lesson 5 decisions:
 
-- `fig_p38_004`: `preserve_crop` or `preserve_full`; it is the core evidence for Batch Size and epoch time.
+- `fig_p38_004`: `preserve_crop`; keep both timing curves and key annotations while trimming surrounding whitespace.
 - `fig_p46_006`: `preserve_crop`; it explains Flat Minima / Sharp Minima and generalization.
 - `fig_p56_007`: `preserve_crop` or `redraw_high_fidelity`; it is the Momentum physical-inertia memory anchor.
 - `fig_p63_008`: `preserve_crop` or `redraw_high_fidelity`; it explains recursive historical direction.

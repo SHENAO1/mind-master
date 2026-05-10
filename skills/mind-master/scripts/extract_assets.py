@@ -136,7 +136,10 @@ def looks_like_real_data_chart(text: str) -> bool:
     )
 
 
-def decision_hint_for_asset(asset_type: str, is_data_chart: bool, context: str) -> tuple[str, str, str]:
+def decision_hint_for_asset(asset_type: str, is_data_chart: bool, context: str, source_id: str = "") -> tuple[str, str, str]:
+    if source_id == "fig_p38_004":
+        return "preserve_crop", "", "source chart needs focused learning crop for Batch Size timing evidence"
+
     if asset_type == "data_chart" and is_data_chart and looks_like_real_data_chart(context):
         return "preserve_full", "", "contains source-backed experimental data trend and concrete numeric ranges"
 
@@ -206,7 +209,8 @@ def classify_asset(item: dict[str, Any], project_path: Path, source_text: str = 
     ):
         asset_type = "data_chart"
 
-    decision_hint, template_id, decision_hint_reason = decision_hint_for_asset(asset_type, bool(is_data_chart), text_blob)
+    source_id = str(enriched.get("id") or "")
+    decision_hint, template_id, decision_hint_reason = decision_hint_for_asset(asset_type, bool(is_data_chart), text_blob, source_id)
     redraw_required = decision_hint.startswith("redraw")
 
     enriched["type"] = asset_type
@@ -218,6 +222,7 @@ def classify_asset(item: dict[str, Any], project_path: Path, source_text: str = 
         if "crop_box" not in enriched:
             source_id = str(enriched.get("id") or "")
             crop_boxes = {
+                "fig_p38_004": [40, 0, 940, 414],
                 "fig_p46_006": [0, 70, 566, 413],
                 "fig_p56_007": [0, 115, 970, 685],
                 "fig_p63_008": [0, 0, 520, 582],

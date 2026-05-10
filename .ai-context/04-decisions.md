@@ -26,6 +26,22 @@
 
 ---
 
+## 2026-05-10 · Source-faithful learning poster 节点压缩与派生元数据
+
+**背景**: 第 5 节已具备五类图片决策、裁剪、callout 和图片可读性校验，但节点仍偏“文档摘要”，中心主题、图标体系、短编号句和派生学习内容没有进入可验证数据结构。用户要求吸收 GPT Image 2 参考图的表达方式，同时禁止伪造原文不存在的 `5.2.3`、`5.4`、`5.5` 等章节编号。
+
+**选项**:
+- A: 继续让 prompt/reference 要求“写短一点”，不在 mindmap 数据或验证器中新增字段。
+- B: 在 lesson/profile 层引入 source-backed learning points、icon metadata、derived/grounded_hint/derived_from 元数据，并用验证器阻塞未标记派生节点、伪章节编号、跨 section 自动补抽和半词硬截断。
+
+**决策**: 选择 B。
+
+**理由**: 学习型导图需要让短句、图标、派生提示和来源追踪成为结构化输出，而不是只靠视觉模板；验证器能防止为了接近参考图而把关键词、Momentum 优势或调参启示伪装成原文章节。
+
+**影响**: 更新 `SKILL.md`、Strategist/Executor/Format/Image references、`render_mindmap.py`、`batch_validate.py`、`templates/markmap.html` 与回归测试。`lesson_05` 使用 `gpt_image2_inspired_source_faithful` profile：中心卡片强化为课程标题与核心主题，Batch 在左侧，Momentum/小结在右侧，关键词与调参启示为 `[*]` 派生区域；新增 `derived_node_labeling` 与 `text_compression` 校验。
+
+**状态**: 生效
+
 ## 2026-05-10 · 学习型导图五类图片策略与可读性校验
 
 **背景**: 第 5 节最新回归显示图片已经能嵌入节点，但整图缩小后教学价值不足；学习型导图需要判断图片是否该全图保留、裁剪、结构化高保真重绘、概念化重绘或省略，并在最终 PNG/PDF 中验证图像确实可读。

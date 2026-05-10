@@ -57,6 +57,7 @@ Node fields:
 - `id`: stable node ID
 - `type`: optional node type. Defaults to `concept`; may be `concept`, `table`, `formula`, `image`, `note`, `keywords`, or `tips`
 - `section_id`: required on H2/H3 heading nodes when the source has visible numbering, such as `5.1` or `5.1.1`
+- `icon`: optional line icon key for learning-poster rendering, such as `database`, `file-text`, `gauge`, `line-chart`, `scale`, `running`, `lightbulb`, `settings`, `list-checks`, `key`, or `wrench`
 - `title`: short visible label
 - `description`: optional factual explanation grounded in source
 - `summary`: optional independent synthesis from source, not a mandatory conclusion
@@ -64,6 +65,9 @@ Node fields:
 - `source_span`: optional source location object with `line_start` and `line_end`
 - `equations`: editable LaTeX strings, without rasterization
 - `image_candidates`: source image IDs or planned redraw IDs
+- `derived`: true only for non-source-heading derived nodes
+- `grounded_hint`: true for inferred but source-grounded learning hints
+- `derived_from` / `derived_from_summary`: source node IDs or summary node IDs that ground a derived node
 - `children`: child nodes
 
 Top-level Strategist fields:
@@ -225,7 +229,9 @@ Use a `keywords` node when the source contains repeated terms, bold terms, or Ch
   "id": "n_keywords",
   "type": "keywords",
   "title": "[*] 关键词",
-  "terms": ["Batch Size", "Epoch", "Shuffle", "Noisy Gradient"]
+  "terms": ["Batch Size", "Epoch", "Shuffle", "Noisy Gradient"],
+  "derived": true,
+  "derived_from": ["source_terms"]
 }
 ```
 
@@ -235,6 +241,7 @@ Rules:
 - Terms must come from the active source, not general domain knowledge.
 - Keywords render as a horizontal bottom capsule strip in GPT Image 2 inspired layouts.
 - Keywords are derived nodes, not source chapters; keep the `[*]` prefix and do not assign source-style section numbers.
+- Keywords must carry `derived: true` and `derived_from`.
 
 ## Tips Nodes
 
@@ -246,6 +253,7 @@ Rules:
 - Tips nodes must include `source_quote` and complete-sentence details.
 - Added tips nodes that are not original headings must use a title prefixed with `[*]`.
 - Derived tuning hints must mark each item with `derived_from_summary` or `grounded_hint`; they must never be numbered as `5.4`, `5.5`, etc.
+- Derived tuning or advantage nodes must set `derived: true` or `grounded_hint: true`, include `derived_from` or `derived_from_summary`, and keep a non-numbered title such as `[*] 调参启示（派生）`.
 
 ## Mindmap JSON
 
@@ -358,6 +366,8 @@ PNG default scale: `2`.
 - `crop_metadata`: every `preserve_crop` decision has `crop_box`, `crop_path`, and `crop_focus` or `crop_reason`
 - `image_callout_grounding`: every retained or redrawn figure has 1 to 2 callouts backed by source quotes
 - `image_readability`: retained or redrawn images meet their required final render width and height
+- `derived_node_labeling`: derived nodes have `derived=true` or `grounded_hint=true`, include `derived_from`, and do not use source-style section numbers
+- `text_compression`: compressed visible titles do not truncate English words and auto density nodes stay within the owning `source_span`
 - `tips_grounding`: tips/takeaway nodes require explicit source evidence and must not appear when unsupported
 - `summary_sentence_checks`: summary/takeaway details remain complete sentences and do not collapse into short noun phrases
 - `browser`: Playwright-rendered HTML checks, including KaTeX errors and SVG presence

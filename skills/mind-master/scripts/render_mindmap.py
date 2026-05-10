@@ -642,8 +642,70 @@ KNOWN_TERMS = [
     "GPU",
 ]
 
+LESSON05_SHORT_POINTS = {
+    "n_batch_def": [
+        ("batch_minibatch", "Batch / Mini-batch：分批计算 Loss 与梯度", "把所有数据拆分成一个个的批次 (Batch / Mini Batch)"),
+        ("batch_size", "Batch Size：一次迭代的更新样本数", "Batch Size: 指单次迭代（Iteration）中用于计算梯度并更新参数的训练样本数量。"),
+        ("epoch", "Epoch：完整遍历一遍训练集", "Epoch: 指训练过程遍历完一遍所有训练数据集的次数。"),
+        ("shuffle", "Shuffle：每个 Epoch 前打乱再分批", "在每个 Epoch 开始前重新打乱数据集顺序并重新划分 Batch"),
+        ("flow", "训练流程：Batch → Loss / Gradient → 更新参数", "从大 B 中提取了一份数据，算出损失（Loss）及其梯度，再更新参数"),
+    ],
+    "n_batch_speed": [
+        ("full_batch", "Full Batch：看完整个数据集才更新一次", "必须把这 20 笔训练数据全部处理完，才能计算一次Loss及梯度"),
+        ("batch_one", "Batch Size = 1：每看一笔就更新一次", "每处理一笔资料，就更新一次参数"),
+        ("no_parallel", "不考虑并行：大 Batch 单次等待更久", "如果不考虑平行运算，与右图相比，左图冷却时间比较长"),
+        ("gpu_parallel", "考虑 GPU 并行：单次时间不一定显著变长", "Batch Size 为N的计算时间不一定比Batch Size为1长"),
+        ("epoch_time", "一个 Epoch 中：大 Batch 更新次数更少", "较小的Batch Size需要更多的时间来完成一轮训练"),
+        ("conclusion", "结论：并行计算时大 Batch 更省训练时间", "较大的 Batch Size 反而能缩短训练时间"),
+    ],
+    "n_batch_generalization": [
+        ("optimization", "Optimization：小 Batch 产生 Noisy Gradient", "小 Batch 产生的 \"Noisy Gradient\" 具有随机性"),
+        ("escape", "噪声有助于跳出 Local Minima / Saddle Points", "更容易跳出局部最小值（Local Minima）或鞍点（Saddle Points）"),
+        ("random_walk", "像在函数表面随机游走，不容易卡住", "如同在函数表面进行随机游走"),
+        ("flat", "Generalization：小 Batch 更易找到 Flat Minima", "小 Batch 倾向于引导模型走到平坦的极小值区域（Flat Minima）"),
+        ("sharp", "大 Batch 更容易落入 Sharp Minima", "大 Batch 容易陷入尖锐的峡谷（Sharp Minima）"),
+        ("robust", "Flat Minima 对测试集更稳健", "平坦区域具有更强的鲁棒性，从而提升泛化能力"),
+    ],
+    "n_momentum_concept": [
+        ("purpose", "目的：缓解陷入鞍点或局部最优", "为了克服梯度下降容易陷入鞍点或局部最优解的问题"),
+        ("analogy", "物理类比：小球凭惯性冲过浅洼地", "由于“惯性”的存在，球依然有动量冲过去"),
+        ("history", "更新不只看当前梯度，也参考历史方向", "还参考了历史更新方向"),
+    ],
+    "n_momentum_algorithm": [
+        ("gd", "传统 Gradient Descent：只看当前梯度", "传统的梯度下降只看当前的梯度方向"),
+        ("momentum", "Momentum：历史方向 + 当前梯度加权求和", "前一次的更新方向”与“当前梯度”加权求和"),
+        ("formula", "公式：$v_{t+1} = \\lambda v_t - \\eta\\nabla L(\\theta)$", "v_{t+1} = \\lambdav_{t} - η∇L(\\theta)"),
+        ("effect", "效果：加速训练，并沿累积方向继续前进", "这不仅能加速训练"),
+        ("escape", "微小局部最优：借助动量继续冲出去", "借助积累的动量“冲”出去"),
+    ],
+    "n_summary": [
+        ("batch", "Batch Size：训练效率与泛化能力的折中", "Batch Size：是训练效率与泛化能力的折中"),
+        ("momentum", "Momentum：引入历史方向，增添更新惯性", "Momentum：通过引入历史方向，为训练过程增添了“惯性”"),
+    ],
+}
+
+ICON_ALIASES = {
+    "database": "database",
+    "file-text": "file-text",
+    "gauge": "gauge",
+    "line-chart": "line-chart",
+    "scale": "scale",
+    "running": "running",
+    "arrow-right-circle": "arrow-right-circle",
+    "lightbulb": "lightbulb",
+    "settings": "settings",
+    "list-checks": "list-checks",
+    "key": "key",
+    "wrench": "wrench",
+}
+
 
 def ensure_keywords_node(outline: dict[str, Any], source_text: str) -> None:
+    existing = next((node for node in iter_nodes(outline.get("nodes", []) or []) if node.get("type") == "keywords"), None)
+    if existing:
+        existing.setdefault("derived", True)
+        existing.setdefault("derived_from", ["source_terms"])
+        return
     if any(node.get("type") == "keywords" for node in iter_nodes(outline.get("nodes", []) or [])):
         return
     terms: list[str] = []
@@ -664,6 +726,8 @@ def ensure_keywords_node(outline: dict[str, Any], source_text: str) -> None:
             "title": "[*] 关键词",
             "terms": terms[:12],
             "source_quote": first_quote,
+            "derived": True,
+            "derived_from": ["source_terms"],
         }
     )
 
@@ -681,6 +745,164 @@ def smart_truncate(value: str, limit: int = 70) -> str:
         space = value.rfind(" ", 0, limit)
         cutoff = space if space >= max(12, limit // 2) else limit
     return value[:cutoff].rstrip(" ，,、；;:：") + "..."
+
+
+def source_span_for_quote(source_text: str, quote: str) -> dict[str, int] | None:
+    quote_key = compact_compare_text(quote)
+    if not source_text or not quote_key:
+        return None
+    for line_number, line in enumerate(source_text.splitlines(), start=1):
+        if quote_key in compact_compare_text(line):
+            return {"line_start": line_number, "line_end": line_number}
+    return None
+
+
+def find_outline_node_by_id(outline: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    for node in iter_nodes(outline.get("nodes", []) or []):
+        if str(node.get("id") or "") == node_id:
+            return node
+    return None
+
+
+def source_contains_all(source_text: str, quotes: list[str]) -> bool:
+    source_key = compact_compare_text(source_text)
+    return all(compact_compare_text(quote) in source_key for quote in quotes if quote)
+
+
+def build_learning_point(parent_id: str, suffix: str, title: str, quote: str, source_text: str) -> dict[str, Any]:
+    point = {
+        "id": f"{parent_id}_{suffix}",
+        "title": title,
+        "source_quote": quote,
+        "learning_point": True,
+    }
+    span = source_span_for_quote(source_text, quote)
+    if span:
+        point["source_span"] = span
+    return point
+
+
+def replace_children_with_learning_points(outline: dict[str, Any], source_text: str) -> None:
+    if "第5节课 模型训练技巧1：批量处理与动量" not in source_text:
+        return
+    for node_id, points in LESSON05_SHORT_POINTS.items():
+        node = find_outline_node_by_id(outline, node_id)
+        if not node:
+            continue
+        next_children = [
+            build_learning_point(node_id, suffix, title, quote, source_text)
+            for suffix, title, quote in points
+            if source_contains_all(source_text, [quote])
+        ]
+        if next_children:
+            node["children"] = next_children
+
+
+def ensure_derived_learning_nodes(outline: dict[str, Any], source_text: str) -> None:
+    if "第5节课 模型训练技巧1：批量处理与动量" not in source_text:
+        return
+
+    momentum = find_outline_node_by_id(outline, "n_momentum")
+    if momentum and not any(str(child.get("id") or "") == "n_momentum_advantages" for child in momentum.get("children", []) or [] if isinstance(child, dict)):
+        quote = "这不仅能加速训练，还能在遇到微小的局部最优时，借助积累的动量“冲”出去。"
+        momentum.setdefault("children", []).append(
+            {
+                "id": "n_momentum_advantages",
+                "type": "tips",
+                "title": "[*] Momentum 优势（派生）",
+                "derived": True,
+                "grounded_hint": True,
+                "derived_from": ["n_momentum_concept", "n_momentum_algorithm"],
+                "source_quote": quote,
+                "source_span": source_span_for_quote(source_text, quote) or {},
+                "children": [
+                    build_learning_point("n_momentum_advantages", "speed", "加速训练", "这不仅能加速训练", source_text),
+                    build_learning_point("n_momentum_advantages", "escape", "借助积累动量冲出去", "借助积累的动量“冲”出去", source_text),
+                    build_learning_point("n_momentum_advantages", "inertia", "历史方向带来更新惯性", "通过引入历史方向，为训练过程增添了“惯性”", source_text),
+                ],
+            }
+        )
+
+    if not any(str(node.get("id") or "") == "n_tuning_hints" for node in outline.get("nodes", []) or [] if isinstance(node, dict)):
+        quote = "size 也成了一个需要进行调整的超参数。"
+        outline.setdefault("nodes", []).append(
+            {
+                "id": "n_tuning_hints",
+                "type": "tips",
+                "title": "[*] 调参启示（派生）",
+                "derived": True,
+                "grounded_hint": True,
+                "derived_from": ["n_batch_table", "n_summary"],
+                "source_quote": quote,
+                "source_span": source_span_for_quote(source_text, quote) or {},
+                "children": [
+                    {
+                        **build_learning_point("n_tuning_hints", "batch_size", "Batch Size 是需调整的超参数", quote, source_text),
+                        "grounded_hint": True,
+                        "derived_from": ["n_batch_table"],
+                    },
+                    {
+                        **build_learning_point("n_tuning_hints", "gpu", "大 Batch 善用 GPU 并行效率", "大 Batch 善用 GPU 平行效率", source_text),
+                        "grounded_hint": True,
+                        "derived_from": ["n_summary"],
+                    },
+                    {
+                        **build_learning_point("n_tuning_hints", "noise", "小 Batch 用噪声改善泛化", "小 Batch 则通过“噪声”优化实现更好的泛化", source_text),
+                        "grounded_hint": True,
+                        "derived_from": ["n_summary"],
+                    },
+                    {
+                        **build_learning_point("n_tuning_hints", "momentum", "Momentum 引入历史方向形成惯性", "Momentum：通过引入历史方向，为训练过程增添了“惯性”", source_text),
+                        "grounded_hint": True,
+                        "derived_from": ["n_summary"],
+                    },
+                ],
+            }
+        )
+
+
+def is_lesson05_source(source_text: str) -> bool:
+    return "第5节课 模型训练技巧1：批量处理与动量" in source_text
+
+
+def infer_icon_key(node: dict[str, Any]) -> str:
+    explicit = str(node.get("icon") or "").strip()
+    if explicit in ICON_ALIASES:
+        return explicit
+    title = str(node.get("title") or "")
+    node_type = str(node.get("type") or "")
+    node_id = str(node.get("id") or "")
+    text = f"{node_id} {title} {node_type}".lower()
+    if node_type == "keywords" or "关键词" in title:
+        return "key"
+    if node_type == "tips" or "调参" in title:
+        return "wrench"
+    if "本章小结" in title or "本节小结" in title or "summary" in node_type:
+        return "list-checks"
+    if "5.1.1" in title or "定义" in title:
+        return "file-text"
+    if "5.1.2" in title or "效率" in title or "speed" in text:
+        return "gauge"
+    if "5.1.3" in title or "泛化" in title or "flat" in text or "generalization" in text:
+        return "line-chart"
+    if "5.1.4" in title or "对比" in title or node_type == "table":
+        return "scale"
+    if "5.2.1" in title or "概念" in title:
+        return "lightbulb"
+    if "5.2.2" in title or "算法" in title or node_type == "formula":
+        return "settings"
+    if "momentum" in text or "动量" in title:
+        return "running"
+    if "batch" in text or "批" in title:
+        return "database"
+    return ""
+
+
+def apply_icon_metadata(outline: dict[str, Any]) -> None:
+    for node in iter_nodes(outline.get("nodes", []) or []):
+        icon = infer_icon_key(node)
+        if icon:
+            node["icon"] = icon
 
 
 def source_lines_with_numbers_for_span(source_text: str, span: dict[str, Any] | None) -> list[tuple[int, str]]:
@@ -1185,6 +1407,44 @@ def render_image_callouts(callouts: list[dict[str, str]]) -> str:
     return '<ul class="balanced-image-callouts">' + "".join(items[:2]) + "</ul>"
 
 
+ICON_SVG = {
+    "database": '<ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v14c0 1.7 3.1 3 7 3s7-1.3 7-3V5"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+    "file-text": '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M8 12h8M8 16h8M8 20h5"/>',
+    "gauge": '<path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4-5"/><path d="M5 19h14"/>',
+    "line-chart": '<path d="M4 19h16"/><path d="M5 16l4-4 3 3 6-8"/><circle cx="9" cy="12" r="1.2"/><circle cx="12" cy="15" r="1.2"/><circle cx="18" cy="7" r="1.2"/>',
+    "scale": '<path d="M12 3v18"/><path d="M5 7h14"/><path d="M6 7l-3 6h6z"/><path d="M18 7l-3 6h6z"/>',
+    "running": '<circle cx="13" cy="4" r="2"/><path d="M12 7l-3 4 4 2 3 6"/><path d="M9 11l-4 2"/><path d="M13 13l5-1"/><path d="M10 16l-3 4"/>',
+    "arrow-right-circle": '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M13 8l4 4-4 4"/>',
+    "lightbulb": '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M8 10a4 4 0 1 1 8 0c0 2-2 3-2.5 5h-3C10 13 8 12 8 10z"/>',
+    "settings": '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.4 3.1a7 7 0 0 0-1.7 1l-2.4-1-2 3.4L5 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 3.1h5l.4-3.1a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5a7 7 0 0 0 .1-1z"/>',
+    "list-checks": '<path d="M8 6h12M8 12h12M8 18h12"/><path d="M3.5 6l1 1 2-2"/><path d="M3.5 12l1 1 2-2"/><path d="M3.5 18l1 1 2-2"/>',
+    "key": '<circle cx="7" cy="14" r="3"/><path d="M10 14h10"/><path d="M17 14v3"/><path d="M14 14v2"/>',
+    "wrench": '<path d="M14 6a4 4 0 0 0 5 5L10 20a3 3 0 0 1-4-4l9-9z"/>',
+}
+
+
+def render_icon_html(icon: str) -> str:
+    icon = ICON_ALIASES.get(str(icon or "").strip(), "")
+    if not icon:
+        return ""
+    inner = ICON_SVG.get(icon, "")
+    if not inner:
+        return ""
+    return (
+        f'<span class="balanced-title-icon icon-{icon}" aria-hidden="true">'
+        f'<svg viewBox="0 0 24 24" role="img">{inner}</svg></span>'
+    )
+
+
+def render_heading_html(node: dict[str, Any], depth: int) -> str:
+    level = min(depth + 2, 6)
+    icon = render_icon_html(str(node.get("icon") or ""))
+    text = html_text(node.get("title") or node.get("id") or "节点")
+    if icon:
+        return f'<h{level} class="balanced-node-title">{icon}<span class="balanced-title-text">{text}</span></h{level}>'
+    return f"<h{level}>{text}</h{level}>"
+
+
 def render_node_html(
     node: dict[str, Any],
     depth: int,
@@ -1211,8 +1471,11 @@ def render_node_html(
     ]
     if section_id:
         attrs.append(f'data-section-id="{html.escape(section_id, quote=True)}"')
+    icon_key = str(node.get("icon") or "").strip()
+    if icon_key:
+        attrs.append(f'data-icon="{html.escape(icon_key, quote=True)}"')
     parts = [f"<article {' '.join(attrs)}>"]
-    parts.append(f'<h{min(depth + 2, 6)}>{html_text(node.get("title") or node.get("id") or "节点")}</h{min(depth + 2, 6)}>')
+    parts.append(render_heading_html(node, depth))
 
     description = html_text(node.get("description", ""))
     summary = html_text(node.get("summary", ""))
@@ -1423,12 +1686,20 @@ def build_balanced_html(
     root_summary = html_text(outline.get("core_question") or outline.get("description") or outline.get("source_title") or "")
     root_terms = collect_root_terms(outline)
     root_items = "".join(f"<li>{html_text(term)}</li>" for term in root_terms)
+    root_title = plain_title(outline)
+    if root_title.startswith("第5节课 模型训练技巧1：批量处理与动量"):
+        root_heading = (
+            '<div class="balanced-root-kicker">第5节课</div>'
+            "<h1>模型训练技巧1：<br>批量处理与动量</h1>"
+        )
+    else:
+        root_heading = f"<h1>{html_text(root_title)}</h1>"
     parts = [
         '<section class="balanced-layout mind-master-render" data-layout-mode="balanced_two_sided">',
         '<svg class="balanced-live-connectors" aria-hidden="true"></svg>',
         render_side(left_nodes, "left"),
         '<section class="balanced-root" aria-label="root">',
-        f"<h1>{html_text(plain_title(outline))}</h1>",
+        root_heading,
     ]
     if root_summary:
         parts.append(f'<p>{root_summary}</p>')
@@ -1584,9 +1855,15 @@ def main(argv: list[str] | None = None) -> int:
         images_by_id = image_index_by_id(load_json(ctx["images_index"], []))
         source_text = ctx["source"].read_text(encoding="utf-8") if ctx["source"].exists() else ""
         apply_section_fidelity(outline)
+        if is_lesson05_source(source_text):
+            outline["visual_profile"] = "gpt_image2_inspired_source_faithful"
+            outline["core_question"] = "核心主题：Batch（批次）与 Momentum（动量）"
+            replace_children_with_learning_points(outline, source_text)
+            ensure_derived_learning_nodes(outline, source_text)
         apply_summary_fidelity(outline, source_text)
         ensure_keywords_node(outline, source_text)
         apply_h3_density(outline, source_text)
+        apply_icon_metadata(outline)
         image_policy_report = apply_image_policy(outline, images_by_id)
 
         ctx["intermediate"].mkdir(parents=True, exist_ok=True)

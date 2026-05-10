@@ -54,6 +54,7 @@ Do not reread references during the same render pass.
 Nodes may include `type`, `description`, `summary`, `source_quote`, `table`, `equations`, `images`, `notes`, and `children` as defined in `mindmap-formats.md`.
 
 For `type: "keywords"`, render `terms` as a horizontal capsule strip. For `type: "tips"`, render only source-backed complete-sentence guidance; if the node lacks source evidence, fail validation rather than inventing advice.
+For learning-poster profiles, render `icon` metadata as simple inline line icons. Do not use emoji. If a node lacks an explicit icon, infer one from its source section or node type.
 
 ## Rendering Rules
 
@@ -106,6 +107,7 @@ When `mode = balanced_two_sided`:
 - keep table nodes intact; they may render wider or scroll horizontally, but rows and columns must not be split;
 - do not drop source-backed nodes, tables, formulas, or image decisions to improve aesthetics.
 - render `type: "keywords"` nodes whose title starts with `[*]` as a bottom capsule strip, not as fake numbered branches.
+- render `type: "tips"` nodes whose title starts with `[*]` as derived learning strips or compact grouped nodes, with visible non-numbered titles.
 
 ## Word Conversion Rendering
 
@@ -113,6 +115,7 @@ When the source is a Word/PDF course note:
 
 - Render the H1/H2/H3 skeleton as headings in `mindmap.md`.
 - Render paragraph-level facts as concise bullets, not as long card descriptions.
+- Prefer short, numbered learning statements that preserve source claims, such as `Batch Size：一次迭代的更新样本数`.
 - Use numbered lists for sibling facts when a card has three or more details; keep bullets compact and readable.
 - If a node has fewer than two detail bullets, render the detail as plain text without numeric markers.
 - If a single detail bullet repeats the node description, render only the more specific version.
@@ -123,6 +126,7 @@ When the source is a Word/PDF course note:
 - For `preserve_crop`, crop before layout so the final card contains the evidence region plus its callouts, not a tiny full-page screenshot.
 - If no grounded callout can be found for a retained or redrawn figure, downgrade it to `omit`.
 - Carry `coverage_report` and `figure_decisions` from `outline.json` into `mindmap.json`.
+- Derived nodes such as keywords, Momentum advantages, or tuning hints must keep `[*]` titles and carry `derived`, `grounded_hint`, and `derived_from` metadata.
 
 ## Auto Density Guardrails
 
@@ -149,6 +153,7 @@ The center/root node is the most important visual position and must contain:
 Do not render the center as only a slogan or one-line tagline. Do not fill the center by directly listing child branch titles.
 
 For Lesson 5-like maps, the center card may use `第5节课 模型训练技巧1：批量处理与动量` and should state the learning question: how Batch Size affects efficiency/generalization and how Momentum combines current gradient with historical direction.
+For the `gpt_image2_inspired_source_faithful` / `source_faithful_learning_poster` profile, split the center card into a strong kicker (`第5节课`), a large title (`模型训练技巧1：批量处理与动量`), and a short core theme line (`核心主题：Batch（批次）与 Momentum（动量）`).
 
 ## Math Delimiter Rules
 

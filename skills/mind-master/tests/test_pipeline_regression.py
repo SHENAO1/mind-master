@@ -375,6 +375,16 @@ class PipelineRegressionTests(unittest.TestCase):
         self.assertTrue(self.validation["checks"]["crop_metadata"]["passed"])
         self.assertTrue(self.validation["checks"]["image_callout_grounding"]["passed"])
 
+    def test_derived_and_text_compression_checks(self):
+        self.assertTrue(self.validation["checks"]["derived_node_labeling"]["passed"])
+        self.assertTrue(self.validation["checks"]["text_compression"]["passed"])
+
+    def test_icon_metadata_rendered(self):
+        icons = re.findall(r'data-icon="([^"]+)"', self.html)
+        self.assertIn("database", icons)
+        self.assertIn("file-text", icons)
+        self.assertIn("key", icons)
+
     def test_auto_density_stays_inside_source_span(self):
         source_lines = (self.project / "intermediate" / "sections" / "lesson_05.md").read_text(encoding="utf-8").splitlines()
         for node in self.mindmap["root"]["children"]:

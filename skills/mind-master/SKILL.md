@@ -49,6 +49,8 @@ DOCX/PDF
 11. GPT Image 2 inspired layouts are allowed only as a visual organization profile. They must keep source headings, source numbering, `source_quote` / `source_span`, tables, formulas, and figure decisions intact.
 12. Never invent section numbers for derived nodes. Keywords, learning hints, or tuning implications must be titled with `[*]` and marked with `derived_from_summary` or `grounded_hint`; they must not become fake sections such as `5.4` or `5.5`.
 13. Every retained or redrawn figure must include 1 to 2 `callouts`, each with a short conclusion and a `source_quote` found in the active source.
+14. Learning-poster profiles render paragraph evidence as compact numbered short sentences. Do not cut English words when shortening; keep full `source_quote` / `source_span` for validation.
+15. Course-note nodes should carry `icon` metadata when the node type is recognizable, using simple line icons such as `database`, `file-text`, `gauge`, `line-chart`, `scale`, `running`, `lightbulb`, `settings`, `list-checks`, `key`, and `wrench`.
 
 ## Required References
 
@@ -520,8 +522,10 @@ Checks:
 - source H2/H3 section numbers are visible in rendered node titles and `section_id` metadata
 - every source table, display formula, and active-section image has an explicit disposition
 - no rendered node introduces a source-style section number absent from the active source
+- derived nodes are explicitly marked with `derived=true` or `grounded_hint=true`, include `derived_from`, and never use source-style section numbers
 - figure decisions use only `preserve_full`, `preserve_crop`, `redraw_high_fidelity`, `redraw_concept`, or `omit`
 - retained/redrawn images meet readability thresholds and carry grounded callouts
+- short text compression does not cut English words, and auto density nodes stay inside their owning `source_span`
 - keywords nodes render as capsule terms when source terms support them
 - summary details are complete source-backed sentences, not noun phrases
 - H3 nodes carry at least four details or are merged before render

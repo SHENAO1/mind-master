@@ -190,8 +190,8 @@
       position: relative;
       z-index: 2;
       align-self: center;
-      min-height: 285px;
-      padding: 28px 24px;
+      min-height: 330px;
+      padding: 30px 24px;
       border: 4px solid #0f1f4f;
       border-radius: 18px;
       background: #ffffff;
@@ -203,10 +203,17 @@
       justify-content: center;
     }
 
+    .balanced-root-kicker {
+      margin-bottom: 8px;
+      color: #1d4ed8;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
     .balanced-root h1 {
       margin: 0 0 12px;
-      font-size: 31px;
-      line-height: 1.22;
+      font-size: 36px;
+      line-height: 1.14;
     }
 
     .balanced-root p {
@@ -327,6 +334,38 @@
       color: var(--branch-color);
       line-height: 1.25;
       overflow-wrap: anywhere;
+    }
+
+    .balanced-node-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .balanced-title-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      flex: 0 0 28px;
+      border: 1.5px solid color-mix(in srgb, var(--branch-color) 70%, #ffffff);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--branch-color) 9%, #ffffff);
+    }
+
+    .balanced-title-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: var(--branch-color);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .balanced-title-text {
+      min-width: 0;
     }
 
     .balanced-node h2 {

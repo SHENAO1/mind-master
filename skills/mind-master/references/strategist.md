@@ -23,6 +23,7 @@ Write valid JSON:
       "id": "n1",
       "title": "一级分支标题",
       "description": "可选事实说明",
+      "icon": "database",
       "summary": "≤30 字提炼",
       "source_quote": "原文证据片段",
       "equations": ["E = mc^2"],
@@ -141,6 +142,8 @@ This is a visual organization profile, not a content rewriting mode.
 - Every retained or redrawn figure must carry 1 to 2 short callouts with `source_quote`; if the source cannot support the callout, omit the figure.
 - Keywords render as one bottom capsule strip with title `[*] 关键词`; they are not a numbered source chapter.
 - A tuning or learning-hint node is allowed only when every item is marked `derived_from_summary` or `grounded_hint` and has `source_quote` or `source_span`. Its title must start with `[*]`.
+- Use compact numbered short sentences for details, not paragraph summaries. Keep full `source_quote` / `source_span` even when the visible title is compressed.
+- Suggested icon metadata: Batch=`database`, Batch 定义=`file-text`, 效率机制=`gauge`, 泛化机制=`line-chart`, 性能对比=`scale`, Momentum=`running` or `arrow-right-circle`, Momentum 概念=`lightbulb`, 算法实现=`settings`, 本章小结=`list-checks`, 关键词=`key`, 调参启示=`wrench`.
 - Do not sacrifice source truth for symmetry, icons, or a denser canvas.
 
 ## Specificity Rules
@@ -187,6 +190,7 @@ After drafting but before the hierarchy GATE:
 - Keywords nodes still need a traceable `source_quote`; use a real source sentence containing one or more of the listed terms, not a synthetic joined list.
 - Create a `type: "tips"` node only when the source explicitly contains practice advice, tuning guidance, cautions, or tips.
 - If the source has no practice/tuning/tips paragraph, do not generate a tips node. If the user asks for derived tuning implications, use title `[*] 调参启示`, set `type: "tips"`, and mark each item with `derived_from_summary` or `grounded_hint`; never number it as a source section.
+- Derived nodes must set `derived: true` or `grounded_hint: true`, include `derived_from` or `derived_from_summary`, and avoid source-style numbering such as `5.4` or `5.5`.
 
 ## Grouping and Opposition Map
 

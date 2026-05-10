@@ -20,6 +20,12 @@
 ---
 
 ## 2026-05-10 · Codex
+**完成 / Done**: 继续优化 Mind-Master 为 source-faithful 学习型 poster：`lesson_05` 节点压缩为可追溯 source_quote/source_span 的编号短句，中心卡片强化为课程标题与核心主题；新增图标 metadata 与 HTML 线性图标渲染；Momentum 优势、关键词、调参启示改为 `[*]` 派生/grounded hint 节点并记录 `derived_from`，禁止伪装成原文章节。
+**进行中 / In progress**: 已重新抽取素材、渲染、导出并验证 `projects/ml_theory2_test/maps/lesson_05`；HTML/SVG/PNG/PDF 均已生成，`batch_validate.py` 通过。最新图片决策：`fig_p38_004=preserve_crop`，`fig_p46_006=preserve_crop`，`fig_p56_007=preserve_crop`，`fig_p63_008=preserve_crop`，`fig_p32_003=redraw_high_fidelity`，`fig_p23_002/fig_p43_005=omit`。
+**下一步建议 / Next**: 将短句压缩、图标 metadata、派生节点标记和图片 callout/readability 规则推广到第 6-8 节；减少 `lesson_05` 专用映射，沉淀为通用 Strategist/Executor 生成逻辑。
+**注意 / Watch out**: 新增校验 `derived_node_labeling` 与 `text_compression` 已纳入 source_fidelity；派生节点必须带 `derived`/`grounded_hint` 和来源，自动补抽不得跨 section。生成产物仍在 ignored 的 `projects/ml_theory2_test/`。
+
+## 2026-05-10 · Codex
 **完成 / Done**: 将 Mind-Master 升级为学习型导图图片策略：Skill/reference/scripts/tests 统一到 `preserve_full` / `preserve_crop` / `redraw_high_fidelity` / `redraw_concept` / `omit` 五类；保留/重绘图新增 source-backed callout，裁剪图新增 `crop_focus`/`crop_reason`，验证器新增 `forbidden_section_numbers`、`image_readability`、`crop_metadata`、`image_callout_grounding`。同时收紧 `source_faithful_poster`/GPT Image 2 inspired 双侧布局，图片学习卡横跨子网格并降低连接线视觉重量。
 **进行中 / In progress**: 已重新抽取素材、渲染、导出并验证 `projects/ml_theory2_test/maps/lesson_05`；HTML/SVG/PNG/PDF 均已生成，`batch_validate.py` 通过。最终图片决策：`fig_p38_004=preserve_full`，`fig_p46_006/fig_p56_007/fig_p63_008=preserve_crop`，`fig_p32_003=redraw_high_fidelity`，`fig_p23_002/fig_p43_005=omit`。
 **下一步建议 / Next**: 将同一五类图片策略应用到第 6-8 节；继续把 outline 生成产品化，减少手工 outline 维护，并扩展更多高保真 redraw template。

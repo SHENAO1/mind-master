@@ -37,6 +37,7 @@ Classic style is a radial or balanced branch mind map for broad conceptual summa
 - Keep connector strokes lower-contrast than content cards; images, formulas, and numbered details must carry the visual emphasis.
 - Render keyword nodes (`[*] 关键词`) as a bottom capsule strip; do not give them invented source numbers.
 - Render retained/redrawn images as grouped learning callouts: visual first, then 1 to 2 short source-backed conclusions next to or under the visual.
+- Render node icons from `icon` metadata as small inline line icons before the title. Use the established mapping: Batch=`database`, definition=`file-text`, efficiency=`gauge`, generalization=`line-chart`, comparison=`scale`, Momentum=`running`, concept=`lightbulb`, algorithm=`settings`, summary=`list-checks`, keywords=`key`, tuning=`wrench`.
 
 ## Adaptive Layout
 
@@ -67,6 +68,7 @@ Lesson 5 preferred balance:
 - bottom: `[*] 关键词` and optional `[*] 调参启示` only when grounded
 - Batch branch details should use compact numbered lists for definition, efficiency, generalization, and the comparison table.
 - Momentum branch should keep the formula card close to the visual that explains `当前梯度 + 历史方向`.
+- Derived Momentum advantages may appear as `[*] Momentum 优势（派生）` under Momentum, but must carry `derived_from` metadata and no source-style number.
 - Never add fake visual-only source numbers such as `5.2.3`, `5.4`, or `5.5`; derived keyword and tuning nodes must keep the `[*]` prefix.
 
 ## Content Rules
@@ -79,6 +81,7 @@ Lesson 5 preferred balance:
 - Keep comparison tables visually intact. Do not turn table rows into separate radial branches.
 - If a node has fewer than two bullet details, render the detail as plain body text, not as a numbered list.
 - H3 child cards should normally contain 4 to 6 source-backed details. Do not stretch sparse cards with filler visuals; omit unmatched images and make the text do the work.
+- In learning-poster mode, compress each detail into a short sentence while preserving the full `source_quote`; do not cut English words mid-token.
 - If an H3 needs auto density, extract only from that H3's `source_span` and bind every added item to a source line.
 
 ## Error Helper

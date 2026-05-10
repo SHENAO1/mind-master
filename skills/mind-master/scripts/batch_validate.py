@@ -140,8 +140,10 @@ def check_node_lengths(flat: list[tuple[dict[str, Any], int]]) -> dict[str, Any]
         title = str(node.get("title") or "")
         if node_section_id(node):
             limit = 42 if level >= 2 else 30
-        elif node.get("summary_sentence") or node.get("auto_density"):
+        elif node.get("summary_sentence") or node.get("auto_density") or node.get("learning_point"):
             limit = 90
+        elif node.get("derived") or node.get("grounded_hint") or str(node.get("title") or "").startswith("[*]"):
+            limit = 36
         else:
             limit = limits.get(level, 30)
         length = visible_len(title)
@@ -159,7 +161,7 @@ def check_node_lengths(flat: list[tuple[dict[str, Any], int]]) -> dict[str, Any]
 
 
 def iter_node_strings(node: dict[str, Any]) -> list[tuple[str, str]]:
-    fields = ["title", "description", "summary", "source_quote"]
+    fields = ["title", "description", "summary"]
     result: list[tuple[str, str]] = []
     for field in fields:
         value = node.get(field)
@@ -815,6 +817,8 @@ def check_source_fidelity(checks: dict[str, Any]) -> dict[str, Any]:
         "formula_coverage",
         "image_decisions",
         "figure_decision_values",
+        "derived_node_labeling",
+        "text_compression",
     ]
     failures = [name for name in required if not checks.get(name, {}).get("passed", False)]
     return {
@@ -835,10 +839,79 @@ def check_tips_grounding(flat: list[tuple[dict[str, Any], int]]) -> dict[str, An
     return {"passed": not failures, "failures": failures}
 
 
+def is_derived_node(node: dict[str, Any]) -> bool:
+    title = str(node.get("title") or "")
+    return (
+        bool(node.get("derived"))
+        or bool(node.get("grounded_hint"))
+        or title.startswith("[*]")
+        or "派生" in title
+    )
+
+
+def check_derived_node_labeling(root: dict[str, Any]) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+    for node, path in flatten_nodes_with_path(root):
+        if not is_derived_node(node):
+            continue
+        title = str(node.get("title") or "")
+        if section_id_from_heading(title.replace("[*]", "").strip()):
+            failures.append({"id": node.get("id"), "title": title, "reason": "derived node must not use source-style section number"})
+        if not (node.get("derived") is True or node.get("grounded_hint") is True):
+            failures.append({"id": node.get("id"), "title": title, "reason": "derived node requires derived=true or grounded_hint=true"})
+        if not (node.get("derived_from") or node.get("derived_from_summary")):
+            failures.append({"id": node.get("id"), "title": title, "reason": "derived node requires derived_from or derived_from_summary"})
+    return {"passed": not failures, "failures": failures}
+
+
+def check_text_compression(root: dict[str, Any]) -> dict[str, Any]:
+    half_word_failures: list[dict[str, Any]] = []
+    auto_span_failures: list[dict[str, Any]] = []
+    for node, path in flatten_nodes_with_path(root):
+        title = str(node.get("title") or "")
+        quote = str(node.get("source_quote") or "")
+        if title.endswith("...") and quote:
+            prefix = title[:-3]
+            if quote.startswith(prefix) and len(quote) > len(prefix):
+                if prefix and prefix[-1].isascii() and prefix[-1].isalnum() and quote[len(prefix)].isascii() and quote[len(prefix)].isalnum():
+                    half_word_failures.append({"id": node.get("id"), "title": title, "source_quote": quote})
+        if not node.get("auto_density"):
+            continue
+        span = node.get("source_span") or {}
+        parent_span = None
+        for ancestor in reversed(path[:-1]):
+            if isinstance(ancestor.get("source_span"), dict):
+                parent_span = ancestor["source_span"]
+                break
+        if not parent_span:
+            auto_span_failures.append({"id": node.get("id"), "title": title, "reason": "auto node has no source_span ancestor"})
+            continue
+        start = int(span.get("line_start") or 0)
+        end = int(span.get("line_end") or start)
+        parent_start = int(parent_span.get("line_start") or 0)
+        parent_end = int(parent_span.get("line_end") or parent_start)
+        if start < parent_start or end > parent_end:
+            auto_span_failures.append(
+                {
+                    "id": node.get("id"),
+                    "title": title,
+                    "source_span": span,
+                    "parent_source_span": parent_span,
+                    "reason": "auto density node crosses owning section span",
+                }
+            )
+    failures = half_word_failures + auto_span_failures
+    return {
+        "passed": not failures,
+        "half_word_truncation": half_word_failures,
+        "auto_span_failures": auto_span_failures,
+    }
+
+
 def check_summary_sentences(root: dict[str, Any]) -> dict[str, Any]:
     failures: list[dict[str, Any]] = []
-    verb_re = re.compile(r"(是|为|通过|引入|依赖|参考|产生|实现|带来|提升|克服|负责|善用|增添|更新|缩短|改善|帮助|解释)")
-    nominal_ending_re = re.compile(r"(?:的)?(?:折中|惯性|机制|概念|方向|能力|影响|对比)$")
+    verb_re = re.compile(r"(是|为|通过|引入|依赖|参考|产生|实现|带来|提升|克服|负责|善用|增添|更新|缩短|改善|帮助|解释|折中|取舍|形成)")
+    nominal_ending_re = re.compile(r"(?:的)?(?:机制|概念|方向|能力|影响|对比)$")
     for node, path in flatten_nodes_with_path(root):
         title = str(node.get("title") or "")
         is_summary = str(node.get("type") or "") in {"summary", "note"} and re.search(r"(小结|总结|summary)", title, re.I)
@@ -1074,8 +1147,10 @@ def main(argv: list[str] | None = None) -> int:
         checks["layout_readability"] = check_layout_readability(mindmap, ctx)
         if checks["layout_readability"].get("skipped"):
             warnings.append("Layout readability export ratio check skipped because PNG/SVG exports are not present yet.")
-        checks["source_fidelity"] = check_source_fidelity(checks)
         checks["tips_grounding"] = check_tips_grounding(flat)
+        checks["derived_node_labeling"] = check_derived_node_labeling(root)
+        checks["text_compression"] = check_text_compression(root)
+        checks["source_fidelity"] = check_source_fidelity(checks)
         checks["summary_sentence_checks"] = check_summary_sentences(root)
         checks["keywords_rendered"] = check_keywords_rendered(root, html_text, source_text)
         checks["h3_density"] = check_h3_density(root)
